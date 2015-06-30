@@ -109,8 +109,11 @@ bool cxa_rpc_message_validateReceivedBytes(cxa_rpc_message_t *const msgIn, const
 			if( sourceString == NULL ) { msgIn->areFieldsConfigured = false; return false; }
 			if( !cxa_linkedField_initChild(&msgIn->src, &msgIn->id, strlen(sourceString)+1) ) { msgIn->areFieldsConfigured = false; return false; }
 
+			// return value
+			if( !cxa_linkedField_initChild_fixedLen(&msgIn->returnValue, &msgIn->src, 1) ) { msgIn->areFieldsConfigured = false; return false; }
+
 			// finally, our params
-			if( !cxa_linkedField_initChild(&msgIn->params, &msgIn->src, (len_bytesIn - cxa_linkedField_getStartIndexOfNextField(&msgIn->src))) ) { msgIn->areFieldsConfigured = false; return false; }
+			if( !cxa_linkedField_initChild(&msgIn->params, &msgIn->returnValue, (len_bytesIn - cxa_linkedField_getStartIndexOfNextField(&msgIn->returnValue))) ) { msgIn->areFieldsConfigured = false; return false; }
 
 			break;
 		}
@@ -158,7 +161,7 @@ bool cxa_rpc_message_initRequest(cxa_rpc_message_t *const msgIn, const char *con
 }
 
 
-bool cxa_rpc_message_initResponse(cxa_rpc_message_t *const msgIn, const char *const reqSrcIn, uint16_t reqIdIn)
+bool cxa_rpc_message_initResponse(cxa_rpc_message_t *const msgIn, const char *const reqSrcIn, CXA_RPC_ID_DATATYPE reqIdIn)
 {
 	cxa_assert(msgIn);
 	cxa_assert(reqSrcIn);
@@ -173,13 +176,16 @@ bool cxa_rpc_message_initResponse(cxa_rpc_message_t *const msgIn, const char *co
 	if( !cxa_linkedField_initChild(&msgIn->dest, &msgIn->type, 0) || !cxa_linkedField_append_cString(&msgIn->dest, reqSrcIn) ) return false;
 
 	// id
-	if( !cxa_linkedField_initChild_fixedLen(&msgIn->id, &msgIn->dest, ID_LEN_BYTES) || !cxa_linkedField_append_uint16LE(&msgIn->id, reqIdIn) ) return false;
+	if( !cxa_linkedField_initChild_fixedLen(&msgIn->id, &msgIn->dest, ID_LEN_BYTES) || !cxa_linkedField_append(&msgIn->id, (uint8_t*)&reqIdIn, sizeof(reqIdIn)) ) return false;
 
 	// source (empty for now)
 	if( !cxa_linkedField_initChild(&msgIn->src, &msgIn->id, 0) ) return false;
 
+	// return value
+	if( !cxa_linkedField_initChild_fixedLen(&msgIn->returnValue, &msgIn->src, 1) || !cxa_linkedField_append_uint8(&msgIn->returnValue, CXA_RPC_METHOD_RETVAL_UNKNOWN) ) return false;
+
 	// finally, the params
-	if( !cxa_linkedField_initChild(&msgIn->params, &msgIn->src, 0) ) return false;
+	if( !cxa_linkedField_initChild(&msgIn->params, &msgIn->returnValue, 0) ) return false;
 
 	// if we made it here, we're good to go!
 	msgIn->areFieldsConfigured = true;
@@ -259,12 +265,33 @@ cxa_linkedField_t* cxa_rpc_message_getParams(cxa_rpc_message_t *const msgIn)
 }
 
 
+bool cxa_rpc_message_getReturnValue(cxa_rpc_message_t *const msgIn)
+{
+	cxa_assert(msgIn);
+	if( !msgIn->areFieldsConfigured ) return CXA_RPC_METHOD_RETVAL_UNKNOWN;
+
+	if( cxa_rpc_message_getType(msgIn) != CXA_RPC_MESSAGE_TYPE_RESPONSE ) return CXA_RPC_METHOD_RETVAL_UNKNOWN;
+
+	uint8_t retVal_raw = 0;
+	return cxa_linkedField_get_uint8(&msgIn->returnValue, 0, retVal_raw) ? retVal_raw : CXA_RPC_METHOD_RETVAL_UNKNOWN;
+}
+
+
 bool cxa_rpc_message_setId(cxa_rpc_message_t *const msgIn, uint16_t idIn)
 {
 	cxa_assert(msgIn);
 	if( !msgIn->areFieldsConfigured ) return false;
 
 	return cxa_linkedField_replace_uint16LE(&msgIn->id, 0, idIn);
+}
+
+
+bool cxa_rpc_message_setReturnValue(cxa_rpc_message_t *const msgIn, cxa_rpc_method_retVal_t returnValueIn)
+{
+	cxa_assert(msgIn);
+	if( !msgIn->areFieldsConfigured ) return false;
+
+	return cxa_linkedField_replace_uint8(&msgIn->returnValue, 0, returnValueIn);
 }
 
 
