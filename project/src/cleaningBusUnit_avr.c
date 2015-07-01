@@ -61,8 +61,6 @@ static bs_cleaningChannel_t chan1;
 static bs_cleaningChannel_t chan2;
 static bs_cleaningChannel_t chan3;
 
-static volatile bool linkEstablished = false;
-
 
 // ******** global function implementations ********
 int main(void)
@@ -78,7 +76,9 @@ int main(void)
 	cxa_rpc_node_init_globalRoot(&node_upstream, &timeBase_genPurp);
 	cxa_rpc_nodeRemote_t nr_upstream;
 	cxa_rpc_nodeRemote_init_upstream(&nr_upstream, &ioStreamInput.endPoint2, &timeBase_genPurp);
-	cxa_rpc_nodeRemote_addLinkListener(&nr_upstream, cb_linkEstablished, NULL);
+	
+	bool linkEstablished = false;
+	cxa_rpc_nodeRemote_addLinkListener(&nr_upstream, cb_linkEstablished, &linkEstablished);
 	cxa_rpc_node_addSubNode_remote(&node_upstream, &nr_upstream);
 
 	int currChanIndex = 0;
@@ -195,5 +195,8 @@ void sysInit()
 
 static void cb_linkEstablished(cxa_rpc_nodeRemote_t *const nrIn, void* userVarIn)
 {
-	linkEstablished = true;	
+	bool* linkEstablished = (bool*)userVarIn;
+	cxa_assert(linkEstablished);
+	
+	*linkEstablished = true;
 }
