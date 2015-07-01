@@ -114,7 +114,7 @@ static cxa_rpc_method_retVal_t rpc_methodCb_setState(cxa_linkedField_t *const pa
 
 	// validate our requested state
 	bs_cleaningChannel_state_t newState = newState_raw;
-	if( (newState != BS_CLEANCHAN_STATE_IDLE) || (newState != BS_CLEANCHAN_STATE_BUS) || (newState != BS_CLEANCHAN_STATE_DRAIN_ADJACENT) ) return CXA_RPC_METHOD_RETVAL_FAIL_INVALID_PARAMS;
+	if( (newState != BS_CLEANCHAN_STATE_IDLE) && (newState != BS_CLEANCHAN_STATE_BUS) && (newState != BS_CLEANCHAN_STATE_DRAIN_ADJACENT) ) return CXA_RPC_METHOD_RETVAL_FAIL_INVALID_PARAMS;
 
 	cxa_stateMachine_transition(&ccIn->stateMachine, newState);
 	return CXA_RPC_METHOD_RETVAL_SUCCESS;

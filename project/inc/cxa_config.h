@@ -17,6 +17,7 @@
 
 #define CXA_LINE_ENDING			"\n"
 
+#define CXA_RPC_NODE_MAX_NAME_LEN_BYTES				36
 #define CXA_RPC_MSGFACTORY_POOL_NUM_MSGS			4
 
 
