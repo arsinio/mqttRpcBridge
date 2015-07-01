@@ -61,6 +61,8 @@ static bs_cleaningChannel_t chan1;
 static bs_cleaningChannel_t chan2;
 static bs_cleaningChannel_t chan3;
 
+static volatile bool linkEstablished = false;
+
 
 // ******** global function implementations ********
 int main(void)
@@ -75,9 +77,8 @@ int main(void)
 	cxa_rpc_node_t node_upstream;
 	cxa_rpc_node_init_globalRoot(&node_upstream, &timeBase_genPurp);
 	cxa_rpc_nodeRemote_t nr_upstream;
-	bool linkEstablished = false;
 	cxa_rpc_nodeRemote_init_upstream(&nr_upstream, &ioStreamInput.endPoint2, &timeBase_genPurp);
-	cxa_rpc_nodeRemote_addLinkListener(&nr_upstream, cb_linkEstablished, &linkEstablished);
+	cxa_rpc_nodeRemote_addLinkListener(&nr_upstream, cb_linkEstablished, NULL);
 	cxa_rpc_node_addSubNode_remote(&node_upstream, &nr_upstream);
 
 	int currChanIndex = 0;
@@ -137,7 +138,8 @@ void sysInit()
 	cxa_assert_setAssertGpio(&led_error.super);
 	
 	cxa_xmega_pmic_init();
-	cxa_xmega_clockController_init(CXA_XMEGA_CC_INTOSC_32MHZ);
+	//cxa_xmega_clockController_init(CXA_XMEGA_CC_INTOSC_32MHZ);
+	cxa_xmega_clockController_init(CXA_XMEGA_CC_INTOSC_2MHZ);
 	
 	// now setup our debug serial console
 	cxa_xmega_usart_init_noHH(&usart_debug, &USARTD0, 115200);
@@ -193,10 +195,5 @@ void sysInit()
 
 static void cb_linkEstablished(cxa_rpc_nodeRemote_t *const nrIn, void* userVarIn)
 {
-	bool* linkEstablished = (bool*)userVarIn;
-	cxa_assert(linkEstablished);
-
-	*linkEstablished = true;
-	
-	printf("linkEstablished" CXA_LINE_ENDING);
+	linkEstablished = true;	
 }
