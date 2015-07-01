@@ -92,53 +92,48 @@
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <ToolchainSettings>
       <AvrGcc>
-  <avrgcc.common.optimization.RelaxBranches>True</avrgcc.common.optimization.RelaxBranches>
-  <avrgcc.common.outputfiles.hex>True</avrgcc.common.outputfiles.hex>
-  <avrgcc.common.outputfiles.lss>True</avrgcc.common.outputfiles.lss>
-  <avrgcc.common.outputfiles.eep>True</avrgcc.common.outputfiles.eep>
-  <avrgcc.common.outputfiles.srec>True</avrgcc.common.outputfiles.srec>
-  <avrgcc.common.outputfiles.usersignatures>False</avrgcc.common.outputfiles.usersignatures>
-  <avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>True</avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>
-  <avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>True</avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>
-  <avrgcc.compiler.symbols.DefSymbols>
-    <ListValues>
-      <Value>DEBUG</Value>
-    </ListValues>
-  </avrgcc.compiler.symbols.DefSymbols>
-  <avrgcc.compiler.directories.IncludePaths>
-    <ListValues>
-      <Value>../externals/common-c/include/arch-common</Value>
-      <Value>../externals/common-c/include/arch-xmega</Value>
-      <Value>../externals/common-c/include/collections</Value>
-      <Value>../externals/common-c/include/logger</Value>
-      <Value>../externals/common-c/include/misc</Value>
-      <Value>../externals/common-c/include/rpc</Value>
-      <Value>../externals/common-c/include/stateMachine</Value>
-      <Value>../externals/common-c/include/timeUtils</Value>
-      <Value>..</Value>
-    </ListValues>
-  </avrgcc.compiler.directories.IncludePaths>
-  <avrgcc.compiler.optimization.level>Optimize (-O1)</avrgcc.compiler.optimization.level>
-  <avrgcc.compiler.optimization.PackStructureMembers>True</avrgcc.compiler.optimization.PackStructureMembers>
-  <avrgcc.compiler.optimization.AllocateBytesNeededForEnum>True</avrgcc.compiler.optimization.AllocateBytesNeededForEnum>
-  <avrgcc.compiler.optimization.DebugLevel>Default (-g2)</avrgcc.compiler.optimization.DebugLevel>
-  <avrgcc.compiler.warnings.AllWarnings>True</avrgcc.compiler.warnings.AllWarnings>
-  <avrgcc.linker.libraries.Libraries>
-    <ListValues>
-      <Value>libm</Value>
-    </ListValues>
-  </avrgcc.linker.libraries.Libraries>
-  <avrgcc.assembler.debugging.DebugLevel>Default (-Wa,-g)</avrgcc.assembler.debugging.DebugLevel>
-</AvrGcc>
+        <avrgcc.common.optimization.RelaxBranches>True</avrgcc.common.optimization.RelaxBranches>
+        <avrgcc.common.outputfiles.hex>True</avrgcc.common.outputfiles.hex>
+        <avrgcc.common.outputfiles.lss>True</avrgcc.common.outputfiles.lss>
+        <avrgcc.common.outputfiles.eep>True</avrgcc.common.outputfiles.eep>
+        <avrgcc.common.outputfiles.srec>True</avrgcc.common.outputfiles.srec>
+        <avrgcc.common.outputfiles.usersignatures>False</avrgcc.common.outputfiles.usersignatures>
+        <avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>True</avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>
+        <avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>True</avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>
+        <avrgcc.compiler.symbols.DefSymbols>
+          <ListValues>
+            <Value>DEBUG</Value>
+          </ListValues>
+        </avrgcc.compiler.symbols.DefSymbols>
+        <avrgcc.compiler.directories.IncludePaths>
+          <ListValues>
+            <Value>../project/inc</Value>
+            <Value>../externals/common-c/include/arch-common</Value>
+            <Value>../externals/common-c/include/arch-xmega</Value>
+            <Value>../externals/common-c/include/collections</Value>
+            <Value>../externals/common-c/include/logger</Value>
+            <Value>../externals/common-c/include/misc</Value>
+            <Value>../externals/common-c/include/rpc</Value>
+            <Value>../externals/common-c/include/stateMachine</Value>
+            <Value>../externals/common-c/include/timeUtils</Value>
+            <Value>..</Value>
+          </ListValues>
+        </avrgcc.compiler.directories.IncludePaths>
+        <avrgcc.compiler.optimization.level>Optimize (-O1)</avrgcc.compiler.optimization.level>
+        <avrgcc.compiler.optimization.PackStructureMembers>True</avrgcc.compiler.optimization.PackStructureMembers>
+        <avrgcc.compiler.optimization.AllocateBytesNeededForEnum>True</avrgcc.compiler.optimization.AllocateBytesNeededForEnum>
+        <avrgcc.compiler.optimization.DebugLevel>Default (-g2)</avrgcc.compiler.optimization.DebugLevel>
+        <avrgcc.compiler.warnings.AllWarnings>True</avrgcc.compiler.warnings.AllWarnings>
+        <avrgcc.linker.libraries.Libraries>
+          <ListValues>
+            <Value>libm</Value>
+          </ListValues>
+        </avrgcc.linker.libraries.Libraries>
+        <avrgcc.assembler.debugging.DebugLevel>Default (-Wa,-g)</avrgcc.assembler.debugging.DebugLevel>
+      </AvrGcc>
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="CleaningBusUnit.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="cxa_config.h">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="externals\common-c\include\arch-common\cxa_criticalSection.h">
       <SubType>compile</SubType>
     </Compile>
@@ -146,6 +141,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="externals\common-c\include\arch-common\cxa_gpio.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="externals\common-c\include\arch-common\cxa_ioStream.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="externals\common-c\include\arch-common\cxa_ioStream_loopback.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="externals\common-c\include\arch-common\cxa_timeBase.h">
@@ -164,6 +165,9 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="externals\common-c\include\arch-xmega\cxa_xmega_gpio.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="externals\common-c\include\arch-xmega\cxa_xmega_ioStream_toFile.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="externals\common-c\include\arch-xmega\cxa_xmega_pmic.h">
@@ -193,6 +197,9 @@
     <Compile Include="externals\common-c\include\collections\cxa_fixedFifo.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="externals\common-c\include\collections\cxa_linkedField.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="externals\common-c\include\logger\cxa_logger_header.h">
       <SubType>compile</SubType>
     </Compile>
@@ -202,13 +209,28 @@
     <Compile Include="externals\common-c\include\misc\cxa_assert.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="externals\common-c\include\misc\cxa_backgroundUpdater.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="externals\common-c\include\misc\cxa_stringUtils.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="externals\common-c\include\rpc\cxa_serial_protocolParser.h">
+    <Compile Include="externals\common-c\include\rpc\cxa_rpc_message.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="externals\common-c\include\rpc\cxa_serial_rpcProtocolManager.h">
+    <Compile Include="externals\common-c\include\rpc\cxa_rpc_messageFactory.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="externals\common-c\include\rpc\cxa_rpc_messageHandler.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="externals\common-c\include\rpc\cxa_rpc_node.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="externals\common-c\include\rpc\cxa_rpc_nodeRemote.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="externals\common-c\include\rpc\cxa_rpc_protocolParser.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="externals\common-c\include\stateMachine\cxa_stateMachine.h">
@@ -218,6 +240,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="externals\common-c\src\arch-common\cxa_gpio.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="externals\common-c\src\arch-common\cxa_ioStream.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="externals\common-c\src\arch-common\cxa_ioStream_loopback.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="externals\common-c\src\arch-xmega\cxa_xmega_ccp.s">
@@ -236,6 +264,9 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="externals\common-c\src\arch-xmega\cxa_xmega_gpio.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="externals\common-c\src\arch-xmega\cxa_xmega_ioStream_toFile.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="externals\common-c\src\arch-xmega\cxa_xmega_pmic.c">
@@ -265,25 +296,55 @@
     <Compile Include="externals\common-c\src\collections\cxa_fixedFifo.c">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="externals\common-c\src\collections\cxa_linkedField.c">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="externals\common-c\src\logger\cxa_logger.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="externals\common-c\src\misc\cxa_assert.c">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="externals\common-c\src\misc\cxa_backgroundUpdater.c">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="externals\common-c\src\misc\cxa_stringUtils.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="externals\common-c\src\rpc\cxa_serial_protocolParser.c">
+    <Compile Include="externals\common-c\src\rpc\cxa_rpc_message.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="externals\common-c\src\rpc\cxa_serial_rpcProtocolManager.c">
+    <Compile Include="externals\common-c\src\rpc\cxa_rpc_messageFactory.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="externals\common-c\src\rpc\cxa_rpc_messageHandler.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="externals\common-c\src\rpc\cxa_rpc_node.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="externals\common-c\src\rpc\cxa_rpc_nodeRemote.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="externals\common-c\src\rpc\cxa_rpc_protocolParser.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="externals\common-c\src\stateMachine\cxa_stateMachine.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="externals\common-c\src\timeUtils\cxa_timeDiff.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="project\inc\bs_cleaningChannel.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="project\inc\cxa_config.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="project\src\bs_cleaningChannel.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="project\src\cleaningBusUnit_avr.c">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>
@@ -308,6 +369,9 @@
     <Folder Include="externals\common-c\src\rpc\" />
     <Folder Include="externals\common-c\src\stateMachine\" />
     <Folder Include="externals\common-c\src\timeUtils\" />
+    <Folder Include="project\" />
+    <Folder Include="project\inc\" />
+    <Folder Include="project\src\" />
   </ItemGroup>
   <Import Project="$(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets" />
 </Project>
