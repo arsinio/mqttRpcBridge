@@ -25,12 +25,11 @@
 
 
 // ******** local macro definitions ********
-#define SERIAL_NUM		"ROOT_NODE"
+#define SERIAL_NUM		"CBU"
 
 
 // ******** local function prototoypes ********
 void sysInit(void);
-static void cb_linkEstablished(cxa_rpc_nodeRemote_t *const nrIn, void* userVarIn);
 
 
 // ******** local variable declarations ********
@@ -53,7 +52,6 @@ static cxa_xmega_gpio_t sol_tap2_byp;
 static cxa_xmega_gpio_t sol_tap3;
 static cxa_xmega_gpio_t sol_tap3_byp;
 
-static cxa_ioStream_loopback_t ioStreamInput;
 static cxa_rpc_nodeRemote_t nr_main;
 static cxa_rpc_node_t node_localRoot;
 static bs_cleaningChannel_t chan0;
@@ -67,22 +65,9 @@ int main(void)
 {
 	sysInit();
 	
-	cxa_timeDiff_t td_test;
-	cxa_timeDiff_init(&td_test, &timeBase_genPurp, true);
 	cxa_timeDiff_t td_blink;
 	cxa_timeDiff_init(&td_blink, &timeBase_genPurp, true);
 
-	cxa_rpc_node_t node_upstream;
-	cxa_rpc_node_init_globalRoot(&node_upstream, &timeBase_genPurp);
-	cxa_rpc_nodeRemote_t nr_upstream;
-	cxa_rpc_nodeRemote_init_upstream(&nr_upstream, &ioStreamInput.endPoint2, &timeBase_genPurp);
-	
-	bool linkEstablished = false;
-	cxa_rpc_nodeRemote_addLinkListener(&nr_upstream, cb_linkEstablished, &linkEstablished);
-	cxa_rpc_node_addSubNode_remote(&node_upstream, &nr_upstream);
-
-	int currChanIndex = 0;
-	bs_cleaningChannel_state_t currCleanState = BS_CLEANCHAN_STATE_IDLE;
 	while(1)
 	{
 		if( cxa_timeDiff_isElaped_recurring_ms(&td_blink, 500) )
@@ -90,35 +75,16 @@ int main(void)
 			cxa_gpio_toggle(&led_run.super);
 		}
 		
-		if( linkEstablished && cxa_timeDiff_isElaped_recurring_ms(&td_test, 5000) )
+		uint8_t rxChar;
+		if( cxa_ioStream_readByte(cxa_usart_getIoStream(&usart_rs485.super), &rxChar) )
 		{
-			printf(CXA_LINE_ENDING CXA_LINE_ENDING);
-
-			// run some tests
-			cxa_rpc_message_t* reqMsg = cxa_rpc_messageFactory_getFreeMessage_empty();
-			cxa_assert(reqMsg);
-
-			// setup our message destination
-			char chan[25];
-			snprintf(chan, sizeof(chan)-1, "/" SERIAL_NUM "/cleanChan_%d", currChanIndex);
-			chan[sizeof(chan)-1] = 0;
-
-			uint8_t currCleanState_raw = currCleanState;
-			cxa_assert( cxa_rpc_message_initRequest(reqMsg, chan, "setState", &currCleanState_raw, sizeof(currCleanState_raw)) );
-			cxa_rpc_node_sendMessage_async(&node_upstream, reqMsg);
-			cxa_rpc_messageFactory_decrementMessageRefCount(reqMsg);
-
-			if( currCleanState == BS_CLEANCHAN_STATE_DRAIN_ADJACENT )
-			{
-				currCleanState = BS_CLEANCHAN_STATE_IDLE;
-				currChanIndex++;
-				if( currChanIndex == 4 ) currChanIndex = 0;
-			}else currCleanState++;
+			cxa_gpio_toggle(&led_error.super);
+			fputc(rxChar, stdout);
 		}
-
+		
+		/*
 		// manually update each of our channels/nodes
 		cxa_rpc_nodeRemote_update(&nr_main);
-		cxa_rpc_nodeRemote_update(&nr_upstream);
 
 		bs_cleaningChannel_update(&chan0);
 		bs_cleaningChannel_update(&chan1);
@@ -126,6 +92,7 @@ int main(void)
 		bs_cleaningChannel_update(&chan3);
 
 		cxa_backgroundUpdater_update();
+		*/
 	}
 }
 
@@ -152,6 +119,10 @@ void sysInit()
 	cxa_xmega_timer32_init_freerun(&timer_timeBase, CXA_XMEGA_TIMER16_TCE0, CXA_XMEGA_TIMER16_TCE1, CXA_XMEGA_TIMER16_CLOCKSRC_PERCLK_DIV1024);
 	cxa_xmega_timeBase_init_timer32(&timeBase_genPurp, &timer_timeBase);
 	
+	// setup our RS-485 port
+	cxa_xmega_gpio_init_output(&gpio_rs485_txEn, &PORTF, 0, CXA_GPIO_POLARITY_NONINVERTED, 0);
+	cxa_xmega_usart_init_noHH(&usart_rs485, &USARTF0, 9600);
+	
 	// now setup our application-specific components
 	cxa_xmega_gpio_init_output(&led_run, &PORTD, 4, CXA_GPIO_POLARITY_NONINVERTED, 0);
 	cxa_xmega_gpio_init_output(&sol_tap0, &PORTC, 0, CXA_GPIO_POLARITY_NONINVERTED, 0);
@@ -162,13 +133,10 @@ void sysInit()
 	cxa_xmega_gpio_init_output(&sol_tap2_byp, &PORTC, 5, CXA_GPIO_POLARITY_NONINVERTED, 0);
 	cxa_xmega_gpio_init_output(&sol_tap3, &PORTC, 6, CXA_GPIO_POLARITY_NONINVERTED, 0);
 	cxa_xmega_gpio_init_output(&sol_tap3_byp, &PORTC, 7, CXA_GPIO_POLARITY_NONINVERTED, 0);
-	
-	// setup our loopback ioStream for testing
-	cxa_ioStream_loopback_init(&ioStreamInput);
 
 	// setup our local root node and its downstream component
 	cxa_rpc_node_init(&node_localRoot, &timeBase_genPurp, SERIAL_NUM);
-	cxa_assert(cxa_rpc_nodeRemote_init_downstream(&nr_main, &ioStreamInput.endPoint1, &node_localRoot));
+	cxa_assert(cxa_rpc_nodeRemote_init_downstream(&nr_main, cxa_usart_getIoStream(&usart_rs485.super), &node_localRoot));
 
 	// now each of our cleaning channels
 	cxa_assert( bs_cleaningChannel_init(&chan0, 0, &sol_tap0.super, &sol_tap0_byp.super, &timeBase_genPurp) );
@@ -182,21 +150,7 @@ void sysInit()
 	cxa_assert( cxa_rpc_node_addSubNode(&node_localRoot, bs_cleaningChannel_getRpcNode(&chan2)) );
 	cxa_assert( cxa_rpc_node_addSubNode(&node_localRoot, bs_cleaningChannel_getRpcNode(&chan3)) );
 	
-	/*
-	cxa_xmega_gpio_init_output(&gpio_rs485_txEn, &PORTF, 0, CXA_GPIO_POLARITY_NONINVERTED, 0);
-	cxa_xmega_usart_init_noHH(&usart_rs485, &USARTF0, 9600);
-	*/
-	
 	// finally, enable interrupts
 	cxa_xmega_pmic_enableInterruptLevel(CXA_XMEGA_PMIC_INTLEVEL_MED);
 	cxa_xmega_pmic_enableGlobalInterrupts();
-}
-
-
-static void cb_linkEstablished(cxa_rpc_nodeRemote_t *const nrIn, void* userVarIn)
-{
-	bool* linkEstablished = (bool*)userVarIn;
-	cxa_assert(linkEstablished);
-	
-	*linkEstablished = true;
 }
