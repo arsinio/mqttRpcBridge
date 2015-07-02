@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "bs_cleaningChannel.h"
+#include "bs_mainDist.h"
 
 
 /**
@@ -26,128 +26,262 @@
 #include <string.h>
 #include <cxa_assert.h>
 #include <cxa_logger_implementation.h>
+#include <cxa_config.h>
 
 
 // ******** local macro definitions ********
-#define NAME_PREFIX					"cleanChan"
+#define NODE_NAME					"MainDist"
+#define SETUP_TIME_MS				5000
+#define RINSE_TIME_MS				5000
+#define DOSE_TIME_MS				5000
+#define PURGE_TIME_MS				5000
 
 
 // ******** local type definitions ********
+typedef enum
+{
+	BS_MD_STATE_IDLE,
+
+	BS_MD_STATE_1CHAN_SETUP,
+	BS_MD_STATE_FULLSYS_SETUP_FORWARD,
+	BS_MD_STATE_FULLSYS_SETUP_REVERSE,
+
+	BS_MD_STATE_RINSE1,
+	BS_MD_STATE_DOSE,
+	BS_MD_STATE_RINSE2,
+	BS_MD_STATE_PURGE
+}bs_mainDist_state_t;
 
 
 // ******** local function prototypes ********
-static cxa_rpc_method_retVal_t rpc_methodCb_setState(cxa_linkedField_t *const paramsIn, cxa_linkedField_t *const responseParamsIn, void *userVarIn);
-
 static void stateCb_idle_enter(cxa_stateMachine_t *const smIn, void *userVarIn);
-static void stateCb_bus_enter(cxa_stateMachine_t *const smIn, void *userVarIn);
-static void stateCb_drainAdj_enter(cxa_stateMachine_t *const smIn, void *userVarIn);
+static void stateCb_1chanSetup_enter(cxa_stateMachine_t *const smIn, void *userVarIn);
+static void stateCb_fullSysSetupForward_enter(cxa_stateMachine_t *const smIn, void *userVarIn);
+static void stateCb_fullSysSetupReverse_enter(cxa_stateMachine_t *const smIn, void *userVarIn);
+static void stateCb_rinse_enter(cxa_stateMachine_t *const smIn, void *userVarIn);
+static void stateCb_dose_enter(cxa_stateMachine_t *const smIn, void *userVarIn);
+static void stateCb_purge_enter(cxa_stateMachine_t *const smIn, void *userVarIn);
+static void stateCb_purge_state(cxa_stateMachine_t *const smIn, void *userVarIn);
 
 
 // ********  local variable declarations *********
 
 
 // ******** global function implementations ********
-bool bs_cleaningChannel_init(bs_cleaningChannel_t *const ccIn, const uint8_t indexIn, cxa_gpio_t *const sol_busIn, cxa_gpio_t *const sol_bypassIn, cxa_timeBase_t *const tbIn)
+bool bs_mainDist_init(bs_mainDist_t *const mdIn, cxa_timeBase_t *const timeBaseIn, cxa_ioStream_t *const ioStreamIn,
+					  cxa_gpio_t *const sol_co2In, cxa_gpio_t *const sol_dosingPumpIn, cxa_gpio_t *const sol_h2oIn,
+					  cxa_gpio_t *const led_cloudIn, cxa_gpio_t *const led_runIn, cxa_gpio_t *const led_configIn, cxa_gpio_t *const led_errorIn)
 {
-	cxa_assert(ccIn);
+	cxa_assert(mdIn);
+	cxa_assert(timeBaseIn);
+	cxa_assert(sol_co2In);
+	cxa_assert(sol_dosingPumpIn);
+	cxa_assert(sol_h2oIn);
+	cxa_assert(led_cloudIn);
+	cxa_assert(led_runIn);
+	cxa_assert(led_configIn);
+	cxa_assert(led_errorIn);
 
 	// setup our internal state
-	ccIn->sol_bus = sol_busIn;
-	ccIn->sol_bypass = sol_bypassIn;
+	mdIn->sol_co2 = sol_co2In;
+	mdIn->sol_dosingPump = sol_dosingPumpIn;
+	mdIn->sol_h2o = sol_h2oIn;
+	mdIn->led_cloud = led_cloudIn;
+	mdIn->led_run = led_runIn;
+	mdIn->led_config = led_configIn;
+	mdIn->led_error = led_errorIn;
+	cxa_timeDiff_init(&mdIn->td_transition, timeBaseIn, true);
 
-	// setup our RPC node
-	cxa_rpc_node_init(&ccIn->rpcNode, tbIn, "%s_%d", NAME_PREFIX, indexIn);
-	if( !cxa_rpc_node_addMethod(&ccIn->rpcNode, "setState", rpc_methodCb_setState, (void*)ccIn) ) return false;
+	// setup our rpc node and remotes
+	cxa_rpc_node_init(&mdIn->rpcNode, timeBaseIn, NODE_NAME);
+	cxa_rpc_nodeRemote_init_upstream(&mdIn->nr_cbu, ioStreamIn, timeBaseIn);
+	if( !cxa_rpc_node_addSubNode_remote(&mdIn->rpcNode, &mdIn->nr_cbu) ) return false;
+	cxa_rpc_nodeRemote_init_upstream(&mdIn->nr_dtu, ioStreamIn, timeBaseIn);
+	if( !cxa_rpc_node_addSubNode_remote(&mdIn->rpcNode, &mdIn->nr_dtu) ) return false;
 
-	// setup our internal state machine
-	cxa_stateMachine_init(&ccIn->stateMachine, cxa_rpc_node_getName(&ccIn->rpcNode));
-	cxa_stateMachine_addState(&ccIn->stateMachine, BS_CLEANCHAN_STATE_IDLE, "idle", stateCb_idle_enter, NULL, NULL, (void*)ccIn);
-	cxa_stateMachine_addState(&ccIn->stateMachine, BS_CLEANCHAN_STATE_BUS, "bus", stateCb_bus_enter, NULL, NULL, (void*)ccIn);
-	cxa_stateMachine_addState(&ccIn->stateMachine, BS_CLEANCHAN_STATE_DRAIN_ADJACENT, "drainAdj", stateCb_drainAdj_enter, NULL, NULL, (void*)ccIn);
-	cxa_stateMachine_transition(&ccIn->stateMachine, BS_CLEANCHAN_STATE_IDLE);
-	cxa_stateMachine_update(&ccIn->stateMachine);
+	// now setup our logger
+	cxa_logger_init(&mdIn->logger, NODE_NAME);
+
+	// and our stateMachine
+	cxa_stateMachine_init_timedStates(&mdIn->stateMachine, NODE_NAME, timeBaseIn);
+	cxa_stateMachine_addState(&mdIn->stateMachine, BS_MD_STATE_IDLE, "idle", stateCb_idle_enter, NULL, NULL, (void*)mdIn);
+	cxa_stateMachine_addState_timed(&mdIn->stateMachine, BS_MD_STATE_1CHAN_SETUP, "1chan_setup", BS_MD_STATE_RINSE1, SETUP_TIME_MS, stateCb_1chanSetup_enter, NULL, NULL, (void*)mdIn);
+	cxa_stateMachine_addState_timed(&mdIn->stateMachine, BS_MD_STATE_FULLSYS_SETUP_FORWARD, "fullSys_fwd_setup", BS_MD_STATE_RINSE1, SETUP_TIME_MS, stateCb_fullSysSetupForward_enter, NULL, NULL, (void*)mdIn);
+	cxa_stateMachine_addState_timed(&mdIn->stateMachine, BS_MD_STATE_FULLSYS_SETUP_REVERSE, "fullSys_rev_setup", BS_MD_STATE_RINSE1, SETUP_TIME_MS, stateCb_fullSysSetupReverse_enter, NULL, NULL, (void*)mdIn);
+	cxa_stateMachine_addState_timed(&mdIn->stateMachine, BS_MD_STATE_RINSE1, "rinse1", BS_MD_STATE_DOSE, RINSE_TIME_MS, stateCb_rinse_enter, NULL, NULL, (void*)mdIn);
+	cxa_stateMachine_addState_timed(&mdIn->stateMachine, BS_MD_STATE_DOSE, "dose", BS_MD_STATE_RINSE2, DOSE_TIME_MS, stateCb_dose_enter, NULL, NULL, (void*)mdIn);
+	cxa_stateMachine_addState_timed(&mdIn->stateMachine, BS_MD_STATE_RINSE2, "rinse2", BS_MD_STATE_PURGE, RINSE_TIME_MS, stateCb_rinse_enter, NULL, NULL, (void*)mdIn);
+	cxa_stateMachine_addState(&mdIn->stateMachine, BS_MD_STATE_PURGE, "purge", stateCb_purge_enter, stateCb_purge_state, NULL, (void*)mdIn);
+	cxa_stateMachine_transition(&mdIn->stateMachine, BS_MD_STATE_IDLE);
+	cxa_stateMachine_update(&mdIn->stateMachine);
 
 	return true;
 }
 
 
-cxa_rpc_node_t* bs_cleaningChannel_getRpcNode(bs_cleaningChannel_t *const ccIn)
+cxa_rpc_node_t* bs_mainDist_getRpcNode(bs_mainDist_t *const mdIn)
 {
-	cxa_assert(ccIn);
+	cxa_assert(mdIn);
 
-	return &ccIn->rpcNode;
+	return &mdIn->rpcNode;
 }
 
 
-void bs_cleaningChannel_setState(bs_cleaningChannel_t *const ccIn, bs_cleaningChannel_state_t newStateIn)
+bool bs_mainDist_startChannelClean(bs_mainDist_t *const mdIn, uint8_t chanIndexIn)
 {
-	cxa_assert(ccIn);
+	cxa_assert(mdIn);
+	if( cxa_stateMachine_getCurrentState(&mdIn->stateMachine) != BS_MD_STATE_IDLE ) return false;
 
-	cxa_stateMachine_transition(&ccIn->stateMachine, newStateIn);
+	mdIn->singleCleanChanIndex = chanIndexIn;
+	cxa_stateMachine_transition(&mdIn->stateMachine, BS_MD_STATE_1CHAN_SETUP);
+	return true;
 }
 
 
-bs_cleaningChannel_state_t bs_cleaningChannel_getState(bs_cleaningChannel_t *const ccIn)
+bool bs_mainDist_startSystemClean(bs_mainDist_t *const mdIn)
 {
-	cxa_assert(ccIn);
+	cxa_assert(mdIn);
+	if( cxa_stateMachine_getCurrentState(&mdIn->stateMachine) != BS_MD_STATE_IDLE ) return false;
 
-	return cxa_stateMachine_getCurrentState(&ccIn->stateMachine);
+	cxa_stateMachine_transition(&mdIn->stateMachine, BS_MD_STATE_FULLSYS_SETUP_FORWARD);
+	return true;
 }
 
 
-void bs_cleaningChannel_update(bs_cleaningChannel_t *const ccIn)
+void bs_mainDist_update(bs_mainDist_t *const mdIn)
 {
-	cxa_assert(ccIn);
+	cxa_assert(mdIn);
 
-	cxa_stateMachine_update(&ccIn->stateMachine);
+	cxa_stateMachine_update(&mdIn->stateMachine);
+
+	//cxa_rpc_nodeRemote_update(&mdIn->nr_cbu);
+	//cxa_rpc_nodeRemote_update(&mdIn->nr_dtu);
 }
 
 
 // ******** local function implementations ********
-static cxa_rpc_method_retVal_t rpc_methodCb_setState(cxa_linkedField_t *const paramsIn, cxa_linkedField_t *const responseParamsIn, void *userVarIn)
-{
-	bs_cleaningChannel_t* ccIn = (bs_cleaningChannel_t*)userVarIn;
-	cxa_assert(ccIn);
-
-	uint8_t newState_raw;
-	if( !cxa_linkedField_get_uint8(paramsIn, 0, newState_raw) ) return CXA_RPC_METHOD_RETVAL_FAIL_INVALID_PARAMS;
-
-	// validate our requested state
-	bs_cleaningChannel_state_t newState = newState_raw;
-	if( (newState != BS_CLEANCHAN_STATE_IDLE) && (newState != BS_CLEANCHAN_STATE_BUS) && (newState != BS_CLEANCHAN_STATE_DRAIN_ADJACENT) ) return CXA_RPC_METHOD_RETVAL_FAIL_INVALID_PARAMS;
-
-	cxa_stateMachine_transition(&ccIn->stateMachine, newState);
-	return CXA_RPC_METHOD_RETVAL_SUCCESS;
-}
-
-
 static void stateCb_idle_enter(cxa_stateMachine_t *const smIn, void *userVarIn)
 {
-	bs_cleaningChannel_t* ccIn = (bs_cleaningChannel_t*)userVarIn;
-	cxa_assert(ccIn);
+	bs_mainDist_t *const mdIn = (bs_mainDist_t*)userVarIn;
+	cxa_assert(mdIn);
 
-	cxa_gpio_setValue(ccIn->sol_bus, 0);
-	cxa_gpio_setValue(ccIn->sol_bypass, 0);
+	cxa_gpio_setValue(mdIn->sol_co2, 0);
+	cxa_gpio_setValue(mdIn->sol_dosingPump, 0);
+	cxa_gpio_setValue(mdIn->sol_h2o, 0);
+
+	//@todo make sure all chans and dt are set to idle
 }
 
 
-static void stateCb_bus_enter(cxa_stateMachine_t *const smIn, void *userVarIn)
+static void stateCb_1chanSetup_enter(cxa_stateMachine_t *const smIn, void *userVarIn)
 {
-	bs_cleaningChannel_t* ccIn = (bs_cleaningChannel_t*)userVarIn;
-	cxa_assert(ccIn);
+	bs_mainDist_t *const mdIn = (bs_mainDist_t*)userVarIn;
+	cxa_assert(mdIn);
 
-	// always set 0 first
-	cxa_gpio_setValue(ccIn->sol_bypass, 0);
-	cxa_gpio_setValue(ccIn->sol_bus, 1);
+	mdIn->cleanType = BS_MD_CLEANTYPE_1CHAN;
+
+	// make sure the bus is off
+	cxa_gpio_setValue(mdIn->sol_co2, 0);
+	cxa_gpio_setValue(mdIn->sol_dosingPump, 0);
+	cxa_gpio_setValue(mdIn->sol_h2o, 0);
+
+	//@todo turn the appropriate channel to bus
 }
 
 
-static void stateCb_drainAdj_enter(cxa_stateMachine_t *const smIn, void *userVarIn)
+static void stateCb_fullSysSetupForward_enter(cxa_stateMachine_t *const smIn, void *userVarIn)
 {
-	bs_cleaningChannel_t* ccIn = (bs_cleaningChannel_t*)userVarIn;
-	cxa_assert(ccIn);
+	bs_mainDist_t *const mdIn = (bs_mainDist_t*)userVarIn;
+	cxa_assert(mdIn);
 
-	// always set 0 first
-	cxa_gpio_setValue(ccIn->sol_bus, 0);
-	cxa_gpio_setValue(ccIn->sol_bypass, 1);
+	mdIn->fullSysCleanDir = BS_MD_FULLSYS_CLEANDIR_FORWARD;
+	mdIn->cleanType = BS_MD_CLEANTYPE_FULLSYS;
+
+	// make sure the bus is off
+	cxa_gpio_setValue(mdIn->sol_co2, 0);
+	cxa_gpio_setValue(mdIn->sol_dosingPump, 0);
+	cxa_gpio_setValue(mdIn->sol_h2o, 0);
+
+	//@todo turn chan 0 to bus, chans 1-3 to drainAdj, dt to drainAdj
+}
+
+
+static void stateCb_fullSysSetupReverse_enter(cxa_stateMachine_t *const smIn, void *userVarIn)
+{
+	bs_mainDist_t *const mdIn = (bs_mainDist_t*)userVarIn;
+	cxa_assert(mdIn);
+
+	mdIn->fullSysCleanDir = BS_MD_FULLSYS_CLEANDIR_REVERSE;
+	mdIn->cleanType = BS_MD_CLEANTYPE_FULLSYS;
+
+	// make sure the bus is off
+	cxa_gpio_setValue(mdIn->sol_co2, 0);
+	cxa_gpio_setValue(mdIn->sol_dosingPump, 0);
+	cxa_gpio_setValue(mdIn->sol_h2o, 0);
+
+	//@todo turn chan 3 to bus, chans 0-2 to drainAdj, dt to drainAdj
+}
+
+
+static void stateCb_rinse_enter(cxa_stateMachine_t *const smIn, void *userVarIn)
+{
+	bs_mainDist_t *const mdIn = (bs_mainDist_t*)userVarIn;
+	cxa_assert(mdIn);
+
+	cxa_gpio_setValue(mdIn->sol_co2, 0);
+	cxa_gpio_setValue(mdIn->sol_dosingPump, 0);
+	cxa_gpio_setValue(mdIn->sol_h2o, 1);
+}
+
+
+static void stateCb_dose_enter(cxa_stateMachine_t *const smIn, void *userVarIn)
+{
+	bs_mainDist_t *const mdIn = (bs_mainDist_t*)userVarIn;
+	cxa_assert(mdIn);
+
+	cxa_gpio_setValue(mdIn->sol_co2, 0);
+	cxa_gpio_setValue(mdIn->sol_dosingPump, 1);
+	cxa_gpio_setValue(mdIn->sol_h2o, 1);
+}
+
+
+static void stateCb_purge_enter(cxa_stateMachine_t *const smIn, void *userVarIn)
+{
+	bs_mainDist_t *const mdIn = (bs_mainDist_t*)userVarIn;
+	cxa_assert(mdIn);
+
+	cxa_gpio_setValue(mdIn->sol_co2, 1);
+	cxa_gpio_setValue(mdIn->sol_dosingPump, 0);
+	cxa_gpio_setValue(mdIn->sol_h2o, 0);
+
+	// so we know when to exit the purge state
+	// (little more complex since we have a number of possible destination states)
+	cxa_timeDiff_setStartTime_now(&mdIn->td_transition);
+}
+
+
+static void stateCb_purge_state(cxa_stateMachine_t *const smIn, void *userVarIn)
+{
+	bs_mainDist_t *const mdIn = (bs_mainDist_t*)userVarIn;
+	cxa_assert(mdIn);
+
+	if( cxa_timeDiff_isElapsed_ms(&mdIn->td_transition, PURGE_TIME_MS) )
+	{
+		if( mdIn->cleanType == BS_MD_CLEANTYPE_1CHAN )
+		{
+			cxa_stateMachine_transition(&mdIn->stateMachine, BS_MD_STATE_IDLE);
+			return;
+		}
+
+		// must be doing a full-system clean...see if we need to reverse
+		if( mdIn->fullSysCleanDir == BS_MD_FULLSYS_CLEANDIR_FORWARD )
+		{
+			cxa_stateMachine_transition(&mdIn->stateMachine, BS_MD_STATE_FULLSYS_SETUP_REVERSE);
+			return;
+		}
+
+		// if we made it here, we must be done
+		cxa_stateMachine_transition(&mdIn->stateMachine, BS_MD_STATE_IDLE);
+		return;
+	}
 }

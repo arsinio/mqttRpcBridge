@@ -24,8 +24,8 @@
  *
  * @author Christopher Armenio
  */
-#ifndef BS_CLEANING_CHANNEL_H_
-#define BS_CLEANING_CHANNEL_H_
+#ifndef BS_MAIN_DIST_H_
+#define BS_MAIN_DIST_H_
 
 
 // ******** includes ********
@@ -33,7 +33,9 @@
 #include <cxa_logger_header.h>
 #include <cxa_gpio.h>
 #include <cxa_timeBase.h>
+#include <cxa_timeDiff.h>
 #include <cxa_rpc_node.h>
+#include <cxa_rpc_nodeRemote.h>
 #include <cxa_stateMachine.h>
 
 
@@ -43,41 +45,69 @@
 // ******** global type definitions *********
 /**
  * @public
- * @brief "Forward" declaration of the bs_cleaningChannel_t object
+ * @brief "Forward" declaration of the bs_mainDist_t object
  */
-typedef struct bs_cleaningChannel bs_cleaningChannel_t;
-
-
-typedef enum
-{
-	BS_CLEANCHAN_STATE_UNKNOWN,
-	BS_CLEANCHAN_STATE_IDLE,
-	BS_CLEANCHAN_STATE_BUS,
-	BS_CLEANCHAN_STATE_DRAIN_ADJACENT
-}bs_cleaningChannel_state_t;
+typedef struct bs_mainDist bs_mainDist_t;
 
 
 /**
  * @private
  */
-struct bs_cleaningChannel
+typedef enum
+{
+	BS_MD_CLEANTYPE_1CHAN,
+	BS_MD_CLEANTYPE_FULLSYS
+}bs_mainDist_cleanType_t;
+
+
+/**
+ * @private
+ */
+typedef enum
+{
+	BS_MD_FULLSYS_CLEANDIR_FORWARD,
+	BS_MD_FULLSYS_CLEANDIR_REVERSE
+}bs_mainDist_fullSys_cleanDir_t;
+
+
+/**
+ * @private
+ */
+struct bs_mainDist
 {
 	cxa_stateMachine_t stateMachine;
-	cxa_rpc_node_t rpcNode;
+	cxa_logger_t logger;
 
-	cxa_gpio_t* sol_bus;
-	cxa_gpio_t* sol_bypass;
+	cxa_rpc_node_t rpcNode;
+	cxa_rpc_nodeRemote_t nr_cbu;
+	cxa_rpc_nodeRemote_t nr_dtu;
+
+	cxa_gpio_t* sol_co2;
+	cxa_gpio_t* sol_dosingPump;
+	cxa_gpio_t* sol_h2o;
+
+	cxa_gpio_t* led_cloud;
+	cxa_gpio_t* led_run;
+	cxa_gpio_t* led_config;
+	cxa_gpio_t* led_error;
+
+	cxa_timeDiff_t td_transition;
+	bs_mainDist_cleanType_t cleanType;
+	uint8_t singleCleanChanIndex;
+	bs_mainDist_fullSys_cleanDir_t fullSysCleanDir;
 };
 
 
 // ******** global function prototypes ********
-bool bs_cleaningChannel_init(bs_cleaningChannel_t *const ccIn, const uint8_t indexIn, cxa_gpio_t *const sol_busIn, cxa_gpio_t *const sol_bypassIn, cxa_timeBase_t *const tbIn);
+bool bs_mainDist_init(bs_mainDist_t *const mdIn, cxa_timeBase_t *const timeBaseIn, cxa_ioStream_t *const ioStreamIn,
+					  cxa_gpio_t *const sol_co2In, cxa_gpio_t *const sol_dosingPumpIn, cxa_gpio_t *const sol_h2oIn,
+					  cxa_gpio_t *const led_cloudIn, cxa_gpio_t *const led_runIn, cxa_gpio_t *const led_configIn, cxa_gpio_t *const led_errorIn);
 
-cxa_rpc_node_t* bs_cleaningChannel_getRpcNode(bs_cleaningChannel_t *const ccIn);
+cxa_rpc_node_t* bs_mainDist_getRpcNode(bs_mainDist_t *const mdIn);
 
-void bs_cleaningChannel_setState(bs_cleaningChannel_t *const ccIn, bs_cleaningChannel_state_t newStateIn);
-bs_cleaningChannel_state_t bs_cleaningChannel_getState(bs_cleaningChannel_t *const ccIn);
+bool bs_mainDist_startChannelClean(bs_mainDist_t *const mdIn, uint8_t chanIndexIn);
+bool bs_mainDist_startSystemClean(bs_mainDist_t *const mdIn);
 
-void bs_cleaningChannel_update(bs_cleaningChannel_t *const ccIn);
+void bs_mainDist_update(bs_mainDist_t *const mdIn);
 
-#endif // BS_CLEANING_CHANNEL_H_
+#endif // BS_MAIN_DIST_H_
