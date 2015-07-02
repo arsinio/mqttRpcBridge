@@ -38,19 +38,19 @@
 								<option defaultValue="gnu.c.optimization.level.most" id="gnu.c.compiler.macosx.exe.release.option.optimization.level.1364414392" name="Optimization Level" superClass="gnu.c.compiler.macosx.exe.release.option.optimization.level" valueType="enumerated"/>
 								<option id="gnu.c.compiler.macosx.exe.release.option.debugging.level.1205839477" name="Debug Level" superClass="gnu.c.compiler.macosx.exe.release.option.debugging.level" value="gnu.c.debugging.level.none" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.include.paths.164615468" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/project/inc}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/externals/common-c/include/arch-common}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/externals/common-c/include/arch-libmraa}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/externals/common-c/include/arch-posix}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/externals/common-c/include/collections}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/externals/common-c/include/consoleMenu}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/externals/common-c/include/fdLineParser}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/externals/common-c/include/logger}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/externals/common-c/include/misc}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/externals/common-c/include/rpc}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/externals/common-c/include/stateMachine}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/externals/common-c/include/timeUtils}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/externals/common-c/include/commandLineParser}&quot;"/>
+									<listOptionValue builtIn="false" value="../externals/common-c/include/arch-common"/>
+									<listOptionValue builtIn="false" value="../externals/common-c/include/arch-libmraa"/>
+									<listOptionValue builtIn="false" value="../externals/common-c/include/arch-posix"/>
+									<listOptionValue builtIn="false" value="../externals/common-c/include/collections"/>
+									<listOptionValue builtIn="false" value="../externals/common-c/include/consoleMenu"/>
+									<listOptionValue builtIn="false" value="../externals/common-c/include/fdLineParser"/>
+									<listOptionValue builtIn="false" value="../externals/common-c/include/logger"/>
+									<listOptionValue builtIn="false" value="../externals/common-c/include/misc"/>
+									<listOptionValue builtIn="false" value="../externals/common-c/include/rpc"/>
+									<listOptionValue builtIn="false" value="../externals/common-c/include/stateMachine"/>
+									<listOptionValue builtIn="false" value="../externals/common-c/include/timeUtils"/>
+									<listOptionValue builtIn="false" value="../externals/common-c/include/commandLineParser"/>
+									<listOptionValue builtIn="false" value="../project/inc"/>
 								</option>
 								<option id="gnu.c.compiler.option.preprocessor.preprocess.297155131" name="Preprocess only (-E)" superClass="gnu.c.compiler.option.preprocessor.preprocess" value="false" valueType="boolean"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1235318770" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
