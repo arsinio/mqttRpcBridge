@@ -26,15 +26,20 @@
 #include <string.h>
 #include <cxa_assert.h>
 #include <cxa_logger_implementation.h>
+#include <cxa_rpc_message.h>
+#include <cxa_rpc_messageFactory.h>
 #include <cxa_config.h>
 
 
 // ******** local macro definitions ********
 #define NODE_NAME					"MainDist"
 #define SETUP_TIME_MS				5000
-#define RINSE_TIME_MS				5000
-#define DOSE_TIME_MS				5000
-#define PURGE_TIME_MS				5000
+#define RINSE_TIME_MS				20000
+#define DOSE_TIME_MS				20000
+#define PURGE_TIME_MS				20000
+
+#define UNIT_CBU					"CBU"
+#define UNIT_DTU					"DTU"
 
 
 // ******** local type definitions ********
@@ -53,7 +58,18 @@ typedef enum
 }bs_mainDist_state_t;
 
 
+typedef enum
+{
+	BS_CLEANCHAN_STATE_UNKNOWN,
+	BS_CLEANCHAN_STATE_IDLE,
+	BS_CLEANCHAN_STATE_BUS,
+	BS_CLEANCHAN_STATE_DRAIN_ADJACENT
+}bs_cleaningChannel_state_t;
+
+
 // ******** local function prototypes ********
+static void setChannelState(bs_mainDist_t *const mdIn, char *const unitIn, uint8_t indexIn, bs_cleaningChannel_state_t stateIn);
+
 static void stateCb_idle_enter(cxa_stateMachine_t *const smIn, void *userVarIn);
 static void stateCb_1chanSetup_enter(cxa_stateMachine_t *const smIn, void *userVarIn);
 static void stateCb_fullSysSetupForward_enter(cxa_stateMachine_t *const smIn, void *userVarIn);
@@ -93,11 +109,16 @@ bool bs_mainDist_init(bs_mainDist_t *const mdIn, cxa_timeBase_t *const timeBaseI
 	cxa_timeDiff_init(&mdIn->td_transition, timeBaseIn, true);
 
 	// setup our rpc node and remotes
+	//@todo fix this
+	cxa_rpc_protocolParser_init(&mdIn->rpp, 2, ioStreamIn);
+
+	/*
 	cxa_rpc_node_init(&mdIn->rpcNode, timeBaseIn, NODE_NAME);
 	cxa_rpc_nodeRemote_init_upstream(&mdIn->nr_cbu, ioStreamIn, timeBaseIn);
 	if( !cxa_rpc_node_addSubNode_remote(&mdIn->rpcNode, &mdIn->nr_cbu) ) return false;
 	cxa_rpc_nodeRemote_init_upstream(&mdIn->nr_dtu, ioStreamIn, timeBaseIn);
 	if( !cxa_rpc_node_addSubNode_remote(&mdIn->rpcNode, &mdIn->nr_dtu) ) return false;
+	*/
 
 	// now setup our logger
 	cxa_logger_init(&mdIn->logger, NODE_NAME);
@@ -148,6 +169,14 @@ bool bs_mainDist_startSystemClean(bs_mainDist_t *const mdIn)
 }
 
 
+bool bs_mainDist_isIdle(bs_mainDist_t *const mdIn)
+{
+	cxa_assert(mdIn);
+
+	return (cxa_stateMachine_getCurrentState(&mdIn->stateMachine) == BS_MD_STATE_IDLE );
+}
+
+
 void bs_mainDist_update(bs_mainDist_t *const mdIn)
 {
 	cxa_assert(mdIn);
@@ -160,6 +189,26 @@ void bs_mainDist_update(bs_mainDist_t *const mdIn)
 
 
 // ******** local function implementations ********
+static void setChannelState(bs_mainDist_t *const mdIn, char *const unitIn, uint8_t indexIn, bs_cleaningChannel_state_t stateIn)
+{
+	cxa_assert(mdIn);
+	cxa_assert(unitIn);
+
+	char dest[64];
+	sprintf(dest, "%s/cleanChan_%d", unitIn, indexIn);
+
+	cxa_rpc_message_t* reqMsg = cxa_rpc_messageFactory_getFreeMessage_empty();
+	uint8_t params[] = { (uint8_t)stateIn };
+	cxa_assert( cxa_rpc_message_initRequest(reqMsg, dest, "setState", params, sizeof(params)) );
+	cxa_assert( cxa_rpc_message_setId(reqMsg, 1) );
+	cxa_assert( cxa_rpc_message_prependNodeNameToSource(reqMsg, "mainDist") );
+	cxa_assert( cxa_rpc_message_prependNodeNameToSource(reqMsg, "/") );
+
+	cxa_rpc_protocolParser_writeMessage(&mdIn->rpp, reqMsg);
+	cxa_rpc_messageFactory_decrementMessageRefCount(reqMsg);
+}
+
+
 static void stateCb_idle_enter(cxa_stateMachine_t *const smIn, void *userVarIn)
 {
 	bs_mainDist_t *const mdIn = (bs_mainDist_t*)userVarIn;
@@ -169,7 +218,12 @@ static void stateCb_idle_enter(cxa_stateMachine_t *const smIn, void *userVarIn)
 	cxa_gpio_setValue(mdIn->sol_dosingPump, 0);
 	cxa_gpio_setValue(mdIn->sol_h2o, 0);
 
-	//@todo make sure all chans and dt are set to idle
+	// make sure all chans and dt are set to idle
+	setChannelState(mdIn, UNIT_CBU, 0, BS_CLEANCHAN_STATE_IDLE);
+	setChannelState(mdIn, UNIT_CBU, 1, BS_CLEANCHAN_STATE_IDLE);
+	setChannelState(mdIn, UNIT_CBU, 2, BS_CLEANCHAN_STATE_IDLE);
+	setChannelState(mdIn, UNIT_CBU, 3, BS_CLEANCHAN_STATE_IDLE);
+	setChannelState(mdIn, UNIT_DTU, 0, BS_CLEANCHAN_STATE_IDLE);
 }
 
 
@@ -185,7 +239,8 @@ static void stateCb_1chanSetup_enter(cxa_stateMachine_t *const smIn, void *userV
 	cxa_gpio_setValue(mdIn->sol_dosingPump, 0);
 	cxa_gpio_setValue(mdIn->sol_h2o, 0);
 
-	//@todo turn the appropriate channel to bus
+	// turn the appropriate channel to bus
+	setChannelState(mdIn, UNIT_CBU, mdIn->singleCleanChanIndex, BS_CLEANCHAN_STATE_BUS);
 }
 
 
@@ -202,7 +257,12 @@ static void stateCb_fullSysSetupForward_enter(cxa_stateMachine_t *const smIn, vo
 	cxa_gpio_setValue(mdIn->sol_dosingPump, 0);
 	cxa_gpio_setValue(mdIn->sol_h2o, 0);
 
-	//@todo turn chan 0 to bus, chans 1-3 to drainAdj, dt to drainAdj
+	// turn chan 0 to bus, chans 1-3 to drainAdj, dt to drainAdj
+	setChannelState(mdIn, UNIT_CBU, 0, BS_CLEANCHAN_STATE_BUS);
+	setChannelState(mdIn, UNIT_CBU, 1, BS_CLEANCHAN_STATE_DRAIN_ADJACENT);
+	setChannelState(mdIn, UNIT_CBU, 2, BS_CLEANCHAN_STATE_DRAIN_ADJACENT);
+	setChannelState(mdIn, UNIT_CBU, 3, BS_CLEANCHAN_STATE_DRAIN_ADJACENT);
+	setChannelState(mdIn, UNIT_DTU, 0, BS_CLEANCHAN_STATE_DRAIN_ADJACENT);
 }
 
 
@@ -219,7 +279,12 @@ static void stateCb_fullSysSetupReverse_enter(cxa_stateMachine_t *const smIn, vo
 	cxa_gpio_setValue(mdIn->sol_dosingPump, 0);
 	cxa_gpio_setValue(mdIn->sol_h2o, 0);
 
-	//@todo turn chan 3 to bus, chans 0-2 to drainAdj, dt to drainAdj
+	// turn chan 3 to bus, chans 0-2 to drainAdj, dt to drainAdj
+	setChannelState(mdIn, UNIT_CBU, 0, BS_CLEANCHAN_STATE_DRAIN_ADJACENT);
+	setChannelState(mdIn, UNIT_CBU, 1, BS_CLEANCHAN_STATE_DRAIN_ADJACENT);
+	setChannelState(mdIn, UNIT_CBU, 2, BS_CLEANCHAN_STATE_DRAIN_ADJACENT);
+	setChannelState(mdIn, UNIT_CBU, 3, BS_CLEANCHAN_STATE_BUS);
+	setChannelState(mdIn, UNIT_DTU, 0, BS_CLEANCHAN_STATE_IDLE);
 }
 
 

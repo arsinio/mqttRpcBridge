@@ -37,6 +37,7 @@
 #include <cxa_rpc_node.h>
 #include <cxa_rpc_nodeRemote.h>
 #include <cxa_stateMachine.h>
+#include <cxa_rpc_protocolParser.h>
 
 
 // ******** global macro definitions ********
@@ -95,6 +96,9 @@ struct bs_mainDist
 	bs_mainDist_cleanType_t cleanType;
 	uint8_t singleCleanChanIndex;
 	bs_mainDist_fullSys_cleanDir_t fullSysCleanDir;
+
+	//@todo fix this
+	cxa_rpc_protocolParser_t rpp;
 };
 
 
@@ -107,6 +111,7 @@ cxa_rpc_node_t* bs_mainDist_getRpcNode(bs_mainDist_t *const mdIn);
 
 bool bs_mainDist_startChannelClean(bs_mainDist_t *const mdIn, uint8_t chanIndexIn);
 bool bs_mainDist_startSystemClean(bs_mainDist_t *const mdIn);
+bool bs_mainDist_isIdle(bs_mainDist_t *const mdIn);
 
 void bs_mainDist_update(bs_mainDist_t *const mdIn);
 
