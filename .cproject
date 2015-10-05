@@ -18,8 +18,11 @@
 					<folderInfo id="cdt.managedbuild.config.macosx.exe.release.1788344933." name="/" resourcePath="">
 						<toolChain id="cdt.managedbuild.toolchain.gnu.macosx.exe.release.770150758" name="MacOSX GCC" superClass="cdt.managedbuild.toolchain.gnu.macosx.exe.release">
 							<targetPlatform id="cdt.managedbuild.target.gnu.platform.macosx.exe.release.2072035059" name="Debug Platform" superClass="cdt.managedbuild.target.gnu.platform.macosx.exe.release"/>
-							<builder buildPath="${workspace_loc:/MainDist}/Release" id="cdt.managedbuild.target.gnu.builder.macosx.exe.release.340291047" keepEnvironmentInBuildfile="false" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.macosx.exe.release"/>
+							<builder arguments="root@192.168.2.145 &quot;cd /root/MainDist/Release ; make &quot;" buildPath="${workspace_loc:/MainDist}/Release" command="ssh" id="cdt.managedbuild.target.gnu.builder.macosx.exe.release.340291047" keepEnvironmentInBuildfile="false" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.macosx.exe.release"/>
 							<tool id="cdt.managedbuild.tool.macosx.c.linker.macosx.exe.release.96456195" name="MacOS X C Linker" superClass="cdt.managedbuild.tool.macosx.c.linker.macosx.exe.release">
+								<option id="macosx.c.link.option.libs.310039695" name="Libraries (-l)" superClass="macosx.c.link.option.libs" valueType="libs">
+									<listOptionValue builtIn="false" value="mraa"/>
+								</option>
 								<inputType id="cdt.managedbuild.tool.macosx.c.linker.input.2125086002" superClass="cdt.managedbuild.tool.macosx.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -38,39 +41,43 @@
 								<option defaultValue="gnu.c.optimization.level.most" id="gnu.c.compiler.macosx.exe.release.option.optimization.level.1364414392" name="Optimization Level" superClass="gnu.c.compiler.macosx.exe.release.option.optimization.level" valueType="enumerated"/>
 								<option id="gnu.c.compiler.macosx.exe.release.option.debugging.level.1205839477" name="Debug Level" superClass="gnu.c.compiler.macosx.exe.release.option.debugging.level" value="gnu.c.debugging.level.none" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.include.paths.164615468" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="../externals/common-c/include/arch-common"/>
-									<listOptionValue builtIn="false" value="../externals/common-c/include/arch-libmraa"/>
-									<listOptionValue builtIn="false" value="../externals/common-c/include/arch-posix"/>
-									<listOptionValue builtIn="false" value="../externals/common-c/include/collections"/>
-									<listOptionValue builtIn="false" value="../externals/common-c/include/consoleMenu"/>
-									<listOptionValue builtIn="false" value="../externals/common-c/include/fdLineParser"/>
-									<listOptionValue builtIn="false" value="../externals/common-c/include/logger"/>
-									<listOptionValue builtIn="false" value="../externals/common-c/include/misc"/>
-									<listOptionValue builtIn="false" value="../externals/common-c/include/rpc"/>
-									<listOptionValue builtIn="false" value="../externals/common-c/include/stateMachine"/>
-									<listOptionValue builtIn="false" value="../externals/common-c/include/timeUtils"/>
-									<listOptionValue builtIn="false" value="../externals/common-c/include/commandLineParser"/>
-									<listOptionValue builtIn="false" value="../project/inc"/>
+									<listOptionValue builtIn="false" value="../externals/openCXA-common-c/include/arch-common"/>
+									<listOptionValue builtIn="false" value="../externals/openCXA-common-c/include/arch-libmraa"/>
+									<listOptionValue builtIn="false" value="../externals/openCXA-common-c/include/arch-posix"/>
+									<listOptionValue builtIn="false" value="../externals/openCXA-common-c/include/collections"/>
+									<listOptionValue builtIn="false" value="../externals/openCXA-common-c/include/consoleMenu"/>
+									<listOptionValue builtIn="false" value="../externals/openCXA-common-c/include/fdLineParser"/>
+									<listOptionValue builtIn="false" value="../externals/openCXA-common-c/include/logger"/>
+									<listOptionValue builtIn="false" value="../externals/openCXA-common-c/include/misc"/>
+									<listOptionValue builtIn="false" value="../externals/openCXA-common-c/include/rpc"/>
+									<listOptionValue builtIn="false" value="../externals/openCXA-common-c/include/serial"/>
+									<listOptionValue builtIn="false" value="../externals/openCXA-common-c/include/stateMachine"/>
+									<listOptionValue builtIn="false" value="../externals/openCXA-common-c/include/timeUtils"/>
+									<listOptionValue builtIn="false" value="../externals/openCXA-common-c/include/commandLineParser"/>
+									<listOptionValue builtIn="false" value="../project/include"/>
+									<listOptionValue builtIn="false" value="/usr/local/include"/>
+									<listOptionValue builtIn="false" value="/usr/local/include/mraa"/>
 								</option>
 								<option id="gnu.c.compiler.option.preprocessor.preprocess.297155131" name="Preprocess only (-E)" superClass="gnu.c.compiler.option.preprocessor.preprocess" value="false" valueType="boolean"/>
-								<option id="gnu.c.compiler.option.dialect.std.173287074" superClass="gnu.c.compiler.option.dialect.std" value="gnu.c.compiler.dialect.c99" valueType="enumerated"/>
+								<option id="gnu.c.compiler.option.dialect.std.173287074" name="Language standard" superClass="gnu.c.compiler.option.dialect.std" value="gnu.c.compiler.dialect.default" valueType="enumerated"/>
+								<option id="gnu.c.compiler.option.preprocessor.def.symbols.694319707" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols"/>
+								<option id="gnu.c.compiler.option.dialect.flags.594547697" name="Other dialect flags" superClass="gnu.c.compiler.option.dialect.flags" value="-std=gnu99" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1235318770" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/common-c/src/arch-common"/>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/common-c/src/arch-libmraa"/>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/common-c/src/arch-posix"/>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/common-c/src/collections"/>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/common-c/src/commandLineParser"/>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/common-c/src/consoleMenu"/>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/common-c/src/fdLineParser"/>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/common-c/src/logger"/>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/common-c/src/misc"/>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/common-c/src/rpc"/>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/common-c/src/stateMachine"/>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/common-c/src/timeUtils"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/openCXA-common-c/src/arch-common"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/openCXA-common-c/src/arch-libmraa"/>
+						<entry excluding="cxa_posix_usart.c|cxa_posix_gpioConsole.c" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/openCXA-common-c/src/arch-posix"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/openCXA-common-c/src/collections"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/openCXA-common-c/src/commandLineParser"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/openCXA-common-c/src/logger"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/openCXA-common-c/src/misc"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/openCXA-common-c/src/rpc"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/openCXA-common-c/src/serial"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/openCXA-common-c/src/stateMachine"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="externals/openCXA-common-c/src/timeUtils"/>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="project/src"/>
 					</sourceEntries>
 				</configuration>

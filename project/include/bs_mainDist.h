@@ -37,7 +37,7 @@
 #include <cxa_rpc_node.h>
 #include <cxa_rpc_nodeRemote.h>
 #include <cxa_stateMachine.h>
-#include <cxa_rpc_protocolParser.h>
+#include <cxa_protocolParser.h>
 
 
 // ******** global macro definitions ********
@@ -98,7 +98,7 @@ struct bs_mainDist
 	bs_mainDist_fullSys_cleanDir_t fullSysCleanDir;
 
 	//@todo fix this
-	cxa_rpc_protocolParser_t rpp;
+	//cxa_rpc_protocolParser_t rpp;
 };
 
 

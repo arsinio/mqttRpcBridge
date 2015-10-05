@@ -4,20 +4,20 @@
  * Created: 5/25/2015 8:25:20 PM
  *  Author: Christopher Armenio
  */ 
+#include <mraa.h>
+
 #include <cxa_assert.h>
 #include <cxa_posix_timeBase.h>
 #include <cxa_timeDiff.h>
 #include <cxa_delay.h>
 #include <cxa_logger_implementation.h>
+#include <cxa_ioStream_fromFile.h>
 #include <cxa_backgroundUpdater.h>
-#include <bs_mainDist.h>
-
 #include <cxa_libmraa_gpio.h>
 #include <cxa_libmraa_usart.h>
 
 #include <cxa_commandLineParser.h>
-
-#include <mraa.h>
+#include <bs_mainDist.h>
 
 
 // ******** local macro definitions ********
@@ -52,6 +52,8 @@ static bs_mainDist_t mainDist;
 
 static cxa_commandLineParser_t clp;
 
+static cxa_ioStream_fromFile_t ios_debug;
+
 
 // ******** global function implementations ********
 int main( int argc, char* argv[] )
@@ -74,15 +76,19 @@ static void sysInit()
 	// setup our assert system
 	cxa_libmraa_gpio_init_output(&led_error, 25, false);
 	cxa_assert_setAssertGpio(&led_error.super);
-	cxa_assert_setFileDescriptor(stdout);
-	cxa_logger_setGlobalFd(stdout);
-	
-	printf("<boot>" CXA_LINE_ENDING);
+
+	// now setup our debug serial console
+	cxa_ioStream_fromFile_init(&ios_debug, stdout);
+	cxa_assert_setIoStream(&ios_debug.super);
 	
 	// setup our timing-related systems
 	cxa_posix_timeBase_init(&timeBase_genPurp);
 	cxa_backgroundUpdater_init();
 	
+	// setup our logger
+	cxa_logger_setGlobalTimeBase(&timeBase_genPurp);
+	cxa_logger_setGlobalIoStream(&ios_debug.super);
+
 	// now setup our application-specific components
 	cxa_libmraa_gpio_init_output(&led_run, 8, false);
 	cxa_libmraa_gpio_init_output(&led_cloud, 6, false);

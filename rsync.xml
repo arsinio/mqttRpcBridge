@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="Rsync On Save" basedir="." default="rsync">
+	<description>Builder for eclipse to rsync on save for OSX.</description>
+
+	<!-- local source directory for rsync (read from this directory) -->
+	<property name="rsync.source.dir" value="${basedir}"/>
+
+	<!-- remote rsync host -->
+	<property name="rsync.destination.host" value="192.168.2.145"/>
+
+	<!-- remote rsync directory (write to this directory) -->
+	<property name="rsync.destination.dir" value="/root/"/>
+
+	<!-- ssh user to login to remote -->
+	<property name="rsync.ssh.user" value="root"/>
+
+	<target name="rsync">
+		<echo message="Rsync source:"/>
+  		<echo message="${rsync.source.dir}"/>
+		<echo message="Rsync destination:"/>
+  		<echo message="${rsync.ssh.user}@${rsync.destination.host}:${rsync.destination.dir}"/>
+		<exec dir="." executable="rsync">
+			<arg value="-arv"/>
+
+			<!-- exclude all hidden files and directories -->
+			<arg line="--exclude='.*'"/>
+
+			<!-- exclude build.xml and rsync.xml -->
+			<arg line="--exclude='build.xml'"/>
+			<arg line="--exclude='rsync.xml'"/>
+
+			<!-- variable that holds the filepath to the ssh key -->
+			<arg line="-e &quot;ssh&quot;"/>
+
+			<!-- local directory that is the source for the rsync -->
+			<arg value="${rsync.source.dir}"/>
+
+			<!-- remote host and directory destination for rsync -->
+			<arg value="${rsync.ssh.user}@${rsync.destination.host}:${rsync.destination.dir}"/>
+		</exec>
+  	</target>
+
+</project>

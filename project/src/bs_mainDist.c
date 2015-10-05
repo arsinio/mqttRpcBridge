@@ -13,22 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "bs_mainDist.h"
+#include "../include/bs_mainDist.h"
 
-
-/**
- * @author Christopher Armenio
- */
-
-
-// ******** includes ********
 #include <stdio.h>
 #include <string.h>
 #include <cxa_assert.h>
 #include <cxa_logger_implementation.h>
 #include <cxa_rpc_message.h>
 #include <cxa_rpc_messageFactory.h>
-#include <cxa_config.h>
+
+#include "../include/cxa_config.h"
 
 
 // ******** local macro definitions ********
@@ -110,7 +104,7 @@ bool bs_mainDist_init(bs_mainDist_t *const mdIn, cxa_timeBase_t *const timeBaseI
 
 	// setup our rpc node and remotes
 	//@todo fix this
-	cxa_rpc_protocolParser_init(&mdIn->rpp, 2, ioStreamIn);
+	//cxa_rpc_protocolParser_init(&mdIn->rpp, 2, ioStreamIn);
 
 	/*
 	cxa_rpc_node_init(&mdIn->rpcNode, timeBaseIn, NODE_NAME);
@@ -204,7 +198,7 @@ static void setChannelState(bs_mainDist_t *const mdIn, char *const unitIn, uint8
 	cxa_assert( cxa_rpc_message_prependNodeNameToSource(reqMsg, "mainDist") );
 	cxa_assert( cxa_rpc_message_prependNodeNameToSource(reqMsg, "/") );
 
-	cxa_rpc_protocolParser_writeMessage(&mdIn->rpp, reqMsg);
+	//cxa_rpc_protocolParser_writeMessage(&mdIn->rpp, reqMsg);
 	cxa_rpc_messageFactory_decrementMessageRefCount(reqMsg);
 }
 
