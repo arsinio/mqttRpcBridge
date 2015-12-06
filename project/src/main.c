@@ -1,191 +1,94 @@
-/*
- * CleaningBusUnit.c
+/**
+ * Copyright 2015 opencxa.org
  *
- * Created: 5/25/2015 8:25:20 PM
- *  Author: Christopher Armenio
- */ 
-#include <mraa.h>
-
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * @author Christopher Armenio
+ */
 #include <cxa_assert.h>
-#include <cxa_posix_timeBase.h>
-#include <cxa_timeDiff.h>
-#include <cxa_delay.h>
+#define CXA_LOG_LEVEL				CXA_LOG_LEVEL_TRACE
 #include <cxa_logger_implementation.h>
-#include <cxa_ioStream_fromFile.h>
-#include <cxa_backgroundUpdater.h>
-#include <cxa_libmraa_gpio.h>
-#include <cxa_libmraa_usart.h>
+#include <cxa_uniqueId.h>
+#include <cxa_esp8266_gpio.h>
+#include <cxa_esp8266_usart.h>
+#include <cxa_esp8266_timeBase.h>
+#include <cxa_esp8266_wifiManager.h>
+#include <cxa_esp8266_network_factory.h>
 
-#include <cxa_commandLineParser.h>
-#include <bs_mainDist.h>
+#include <cxa_connectionManager.h>
+#include <cxa_mqtt_rpc_node_bridge_single.h>
+#include <cxa_mqtt_rpc_node_root.h>
+
+#include <user_interface.h>
 
 
 // ******** local macro definitions ********
 
 
 // ******** local function prototoypes ********
-static void sysInit(void);
-static void clp_idle(cxa_commandLineParser_t *const clpIn, void * userVarIn);
-static void clp_fullSystem(cxa_commandLineParser_t *const clpIn, void * userVarIn);
-static void clp_chanClean_0(cxa_commandLineParser_t *const clpIn, void * userVarIn);
-static void clp_chanClean_1(cxa_commandLineParser_t *const clpIn, void * userVarIn);
-static void clp_chanClean_2(cxa_commandLineParser_t *const clpIn, void * userVarIn);
-static void clp_chanClean_3(cxa_commandLineParser_t *const clpIn, void * userVarIn);
 
 
 // ******** local variable declarations ********
-static cxa_timeBase_t timeBase_genPurp;
+static cxa_esp8266_gpio_t led0;
 
-static cxa_libmraa_gpio_t sol_co2;
-static cxa_libmraa_gpio_t sol_dosing;
-static cxa_libmraa_gpio_t sol_h2o;
+static cxa_esp8266_usart_t usart_log;
+static cxa_esp8266_usart_t usart_system;
 
-static cxa_libmraa_gpio_t led_cloud;
-static cxa_libmraa_gpio_t led_run;
-static cxa_libmraa_gpio_t led_error;
-static cxa_libmraa_gpio_t led_config;
+static cxa_timeBase_t tb_generalPurpose;
 
-static cxa_libmraa_usart_t usart_rs485;
-static cxa_libmraa_gpio_t gpio_rs485_txen;
-
-static bs_mainDist_t mainDist;
-
-static cxa_commandLineParser_t clp;
-
-static cxa_ioStream_fromFile_t ios_debug;
+static cxa_mqtt_rpc_node_root_t rpcNode_root;
+static cxa_mqtt_rpc_node_bridge_single_t rpcNode_bridge;
 
 
 // ******** global function implementations ********
-int main( int argc, char* argv[] )
+void setup(void)
 {
-	cxa_commandLineParser_init(&clp, "BeerSmart Demo", "Demo of BeerSmart prototype");
-	cxa_commandLineParser_addOption_noArg(&clp, "i", "idle", "idle the system", false, clp_idle, NULL);
-	cxa_commandLineParser_addOption_noArg(&clp, "fs", "fullSystem", "full system clean", false, clp_fullSystem, NULL);
-	cxa_commandLineParser_addOption_noArg(&clp, "sc0", "singleChan_0", "single channel clean 0", false, clp_chanClean_0, NULL);
-	cxa_commandLineParser_addOption_noArg(&clp, "sc1", "singleChan_1", "single channel clean 1", false, clp_chanClean_1, NULL);
-	cxa_commandLineParser_addOption_noArg(&clp, "sc2", "singleChan_2", "single channel clean 2", false, clp_chanClean_2, NULL);
-	cxa_commandLineParser_addOption_noArg(&clp, "sc3", "singleChan_3", "single channel clean 3", false, clp_chanClean_3, NULL);
+	// setup our assert LED
+	cxa_esp8266_gpio_init_output(&led0, 0, CXA_GPIO_POLARITY_INVERTED, 0);
+	cxa_assert_setAssertGpio(&led0.super);
 
-	cxa_commandLineParser_parseOptions(&clp, argc, argv);
+	// setup our logging usart
+	cxa_esp8266_usart_init_noHH(&usart_log, CXA_ESP8266_USART_1, 115200, 0);
+	cxa_ioStream_t* ios_log = cxa_usart_getIoStream(&usart_log.super);
+	cxa_assert_setIoStream(ios_log);
+
+	// setup our general-purpose timebase
+	cxa_esp8266_timeBase_init(&tb_generalPurpose);
+
+	// setup our logging system
+	cxa_logger_setGlobalTimeBase(&tb_generalPurpose);
+	cxa_logger_setGlobalIoStream(ios_log);
+
+	// setup our system usart (to communicate with the rest of the system)
+	// AND turn off system logging
+	system_set_os_print(0);
+	cxa_esp8266_usart_init_noHH(&usart_system, CXA_ESP8266_USART_0_ALTPINS, 115200, 10);
+
+	// setup our connection manager
+	cxa_connManager_init(&tb_generalPurpose, &led0.super);
+
+	// setup our node root node bridge
+	cxa_mqtt_rpc_node_root_init(&rpcNode_root, cxa_uniqueId_getHexString(), "/dev/beerSmart", cxa_connManager_getMqttClient());
+	cxa_mqtt_rpc_node_bridge_single_init(&rpcNode_bridge, &rpcNode_root.super, "sys",
+										 cxa_usart_getIoStream(&usart_system.super), &tb_generalPurpose);
+}
+
+
+void loop(void)
+{
+	cxa_connManager_update();
+	cxa_mqtt_rpc_node_bridge_update(&rpcNode_bridge.super);
 }
 
 
 // ******** local function implementations ********
-static void sysInit()
-{
-	// setup our assert system
-	cxa_libmraa_gpio_init_output(&led_error, 25, false);
-	cxa_assert_setAssertGpio(&led_error.super);
-
-	// now setup our debug serial console
-	cxa_ioStream_fromFile_init(&ios_debug, stdout);
-	cxa_assert_setIoStream(&ios_debug.super);
-	
-	// setup our timing-related systems
-	cxa_posix_timeBase_init(&timeBase_genPurp);
-	cxa_backgroundUpdater_init();
-	
-	// setup our logger
-	cxa_logger_setGlobalTimeBase(&timeBase_genPurp);
-	cxa_logger_setGlobalIoStream(&ios_debug.super);
-
-	// now setup our application-specific components
-	cxa_libmraa_gpio_init_output(&led_run, 8, false);
-	cxa_libmraa_gpio_init_output(&led_cloud, 6, false);
-	cxa_libmraa_gpio_init_output(&led_config, 13, false);
-	cxa_libmraa_gpio_init_output(&sol_co2, 54, false);
-	cxa_libmraa_gpio_init_output(&sol_dosing, 40, false);
-	cxa_libmraa_gpio_init_output(&sol_h2o, 41, false);
-
-	cxa_libmraa_gpio_init_output(&gpio_rs485_txen, 36, false);
-	cxa_assert(cxa_libmraa_usart_init_noHH(&usart_rs485, 0, 9600));
-	cxa_gpio_setValue(&gpio_rs485_txen.super, true);
-
-	cxa_assert( bs_mainDist_init(&mainDist, &timeBase_genPurp, cxa_usart_getIoStream(&usart_rs485.super),
-								 &sol_co2.super, &sol_dosing.super, &sol_h2o.super,
-								 &led_cloud.super, &led_run.super, &led_config.super, &led_error.super) );
-}
-
-
-static void clp_idle(cxa_commandLineParser_t *const clpIn, void * userVarIn)
-{
-	mraa_init();
-	sysInit();
-
-	bs_mainDist_update(&mainDist);
-}
-
-
-static void clp_fullSystem(cxa_commandLineParser_t *const clpIn, void * userVarIn)
-{
-	mraa_init();
-	sysInit();
-
-	bs_mainDist_startSystemClean(&mainDist);
-	bs_mainDist_update(&mainDist);
-
-	while( !bs_mainDist_isIdle(&mainDist) )
-	{
-		bs_mainDist_update(&mainDist);
-	}
-}
-
-
-static void clp_chanClean_0(cxa_commandLineParser_t *const clpIn, void * userVarIn)
-{
-	mraa_init();
-	sysInit();
-
-	bs_mainDist_startChannelClean(&mainDist, 0);
-	bs_mainDist_update(&mainDist);
-
-	while( !bs_mainDist_isIdle(&mainDist) )
-	{
-		bs_mainDist_update(&mainDist);
-	}
-}
-
-
-static void clp_chanClean_1(cxa_commandLineParser_t *const clpIn, void * userVarIn)
-{
-	mraa_init();
-	sysInit();
-
-	bs_mainDist_startChannelClean(&mainDist, 1);
-	bs_mainDist_update(&mainDist);
-
-	while( !bs_mainDist_isIdle(&mainDist) )
-	{
-		bs_mainDist_update(&mainDist);
-	}
-}
-
-
-static void clp_chanClean_2(cxa_commandLineParser_t *const clpIn, void * userVarIn)
-{
-	mraa_init();
-	sysInit();
-
-	bs_mainDist_startChannelClean(&mainDist, 2);
-	bs_mainDist_update(&mainDist);
-
-	while( !bs_mainDist_isIdle(&mainDist) )
-	{
-		bs_mainDist_update(&mainDist);
-	}
-}
-
-
-static void clp_chanClean_3(cxa_commandLineParser_t *const clpIn, void * userVarIn)
-{
-	mraa_init();
-	sysInit();
-
-	bs_mainDist_startChannelClean(&mainDist, 3);
-	bs_mainDist_update(&mainDist);
-
-	while( !bs_mainDist_isIdle(&mainDist) )
-	{
-		bs_mainDist_update(&mainDist);
-	}
-}

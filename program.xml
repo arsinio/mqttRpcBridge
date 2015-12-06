@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="esp8266 Builder" basedir="." default="flash">
+	<description>Builder for programming an ESP8266 on OSX</description>
+
+	<!-- path to serial port connected to ESP8266 -->
+	<property name="programmer" value="/dev/tty.usbserial-AL0155TJ"/>
+
+	<!-- location of the ESP8266 sdk binaries -->
+	<property name="esp8266sdkBinDir" value="/opt/esp-open-sdk/xtensa-lx106-elf/bin/"/>
+
+	<!-- location of the esptool binary -->
+	<property name="esptoolPath_createBin" value="${workspace_loc}/${project_name}/project/bin/esptool"/>
+	<property name="esptoolPath_flash" value="${workspace_loc}/${project_name}/project/bin/esptool.py"/>
+
+	<!-- location of the eboot bootloader -->
+	<property name="ebootPath" value="${workspace_loc}/${project_name}/project/lib/eboot.elf"/>
+
+	
+	<!-- don't edit these -->
+	<property environment="env"/>
+	<property name="eclipseBuildOutputDir" value="${workspace_loc}/${project_name}/${config_name}"/>
+
+
+	<target name="checkBinaryExists">
+		<available file="${eclipseBuildOutputDir}/${project_name}.elf" property="binaryPresent"/>
+	</target>
+
+	
+	<target name="printUndefinedSymbols" depends="checkBinaryExists" if="binaryPresent">
+		<echo message="Checking for undefined symbols:"/>
+		<exec dir="${eclipseBuildOutputDir}" executable="${esp8266sdkBinDir}/xtensa-lx106-elf-nm">
+			<arg value="-u"/>
+			<arg value="${project_name}.elf"/>
+		</exec>
+	</target>
+
+	
+	<target name="binary" depends="checkBinaryExists" if="binaryPresent">
+		<echo message="Creating binary '${project_name}.bin':"/>
+		
+		<exec dir="${eclipseBuildOutputDir}" executable="${esptoolPath_createBin}">
+			<env key="PATH" value="${env.PATH}:${esp8266sdkBinDir}"/>
+			<arg value="-eo"/>
+			<arg value="${ebootPath}"/>
+			<arg value="-bo"/>
+			<arg value="${project_name}.bin"/>
+			<arg value="-bm"/>
+			<arg value="qio"/>
+			<arg value="-bf"/>
+			<arg value="40"/>
+			<arg value="-bz"/>
+			<arg value="4M"/>
+			<arg value="-bs"/>
+			<arg value=".text"/>
+			<arg value="-bp"/>
+			<arg value="4096"/>
+			<arg value="-ec"/> 
+			<arg value="-eo"/>
+			<arg value="${project_name}.elf"/>
+			<arg value="-bs"/>
+			<arg value=".irom0.text"/> 
+			<arg value="-bs"/>
+			<arg value=".text"/>
+			<arg value="-bs"/>
+			<arg value=".data"/>
+			<arg value="-bs"/>
+			<arg value=".rodata"/> 
+			<arg value="-bc"/>
+			<arg value="-ec"/>
+		</exec>
+		
+		<antcall target="printUndefinedSymbols"/>
+  	</target>
+
+
+	<target name="flash" depends ="binary">
+		<echo message="Flashing using '${programmer}':"/>
+		
+		<exec dir="${eclipseBuildOutputDir}" executable="${esptoolPath_flash}">
+			<env key="PATH" value="${env.PATH}:${esp8266sdkBinDir}"/>
+			<arg value="-p"/>
+			<arg value="${programmer}"/>
+			<arg value="write_flash"/>
+			<arg value="0x00000"/>
+			<arg value="${project_name}.bin"/>
+		</exec>
+	</target>
+
+</project>
