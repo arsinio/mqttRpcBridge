@@ -72,15 +72,14 @@ void setup(void)
 	// setup our system usart (to communicate with the rest of the system)
 	// AND turn off system logging
 	system_set_os_print(0);
-	cxa_esp8266_usart_init_noHH(&usart_system, CXA_ESP8266_USART_0_ALTPINS, 115200, 10);
+	cxa_esp8266_usart_init_noHH(&usart_system, CXA_ESP8266_USART_0_ALTPINS, 9600, 1);
 
 	// setup our connection manager
 	cxa_connManager_init(&tb_generalPurpose, &led0.super);
 
 	// setup our node root node bridge
-	cxa_mqtt_rpc_node_root_init(&rpcNode_root, cxa_uniqueId_getHexString(), "/dev/beerSmart", cxa_connManager_getMqttClient());
-	cxa_mqtt_rpc_node_bridge_single_init(&rpcNode_bridge, &rpcNode_root.super, "sys",
-										 cxa_usart_getIoStream(&usart_system.super), &tb_generalPurpose);
+	cxa_mqtt_rpc_node_root_init(&rpcNode_root, cxa_connManager_getMqttClient(), "/dev/beerSmart", cxa_uniqueId_getHexString());
+	cxa_mqtt_rpc_node_bridge_single_init(&rpcNode_bridge, &rpcNode_root.super, cxa_usart_getIoStream(&usart_system.super), &tb_generalPurpose, "sys");
 }
 
 
