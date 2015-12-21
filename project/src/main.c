@@ -16,6 +16,7 @@
  * @author Christopher Armenio
  */
 #include <cxa_assert.h>
+#include <cxa_connectionManager.h>
 #define CXA_LOG_LEVEL				CXA_LOG_LEVEL_TRACE
 #include <cxa_logger_implementation.h>
 #include <cxa_uniqueId.h>
@@ -25,9 +26,10 @@
 #include <cxa_esp8266_wifiManager.h>
 #include <cxa_esp8266_network_factory.h>
 
-#include <cxa_connectionManager.h>
+#include <cxa_mqtt_messageFactory.h>
 #include <cxa_mqtt_rpc_node_bridge_single.h>
 #include <cxa_mqtt_rpc_node_root.h>
+#include <cxa_protocolParser_mqtt.h>
 
 #include <user_interface.h>
 
@@ -36,6 +38,10 @@
 
 
 // ******** local function prototoypes ********
+static cxa_mqtt_rpc_node_bridge_authorization_t authCb_sys(char *const clientIdIn, size_t clientIdLen_bytes,
+														   char *const usernameIn, size_t usernameLen_bytesIn,
+														   uint8_t *const passwordIn, size_t passwordLen_bytesIn,
+														   void *userVarIn);
 
 
 // ******** local variable declarations ********
@@ -47,6 +53,8 @@ static cxa_esp8266_usart_t usart_system;
 static cxa_timeBase_t tb_generalPurpose;
 
 static cxa_mqtt_rpc_node_root_t rpcNode_root;
+
+static cxa_protocolParser_mqtt_t mpp;
 static cxa_mqtt_rpc_node_bridge_single_t rpcNode_bridge;
 
 
@@ -77,17 +85,31 @@ void setup(void)
 	// setup our connection manager
 	cxa_connManager_init(&tb_generalPurpose, &led0.super);
 
-	// setup our node root node bridge
+	// setup our MQTT protocol parser
+	cxa_mqtt_message_t* msg = cxa_mqtt_messageFactory_getFreeMessage_empty();
+	cxa_assert(msg);
+	cxa_protocolParser_mqtt_init(&mpp, cxa_usart_getIoStream(&usart_system.super), cxa_mqtt_message_getBuffer(msg), &tb_generalPurpose);
+
+	// setup our node root node and bridge
 	cxa_mqtt_rpc_node_root_init(&rpcNode_root, cxa_connManager_getMqttClient(), "/dev/beerSmart", cxa_uniqueId_getHexString());
-	cxa_mqtt_rpc_node_bridge_single_init(&rpcNode_bridge, &rpcNode_root.super, cxa_usart_getIoStream(&usart_system.super), &tb_generalPurpose, "sys");
+	cxa_mqtt_rpc_node_bridge_single_init(&rpcNode_bridge, &rpcNode_root.super, &mpp, "sys");
+	cxa_mqtt_rpc_node_bridge_single_setAuthCb(&rpcNode_bridge, authCb_sys, NULL);
 }
 
 
 void loop(void)
 {
 	cxa_connManager_update();
-	cxa_mqtt_rpc_node_bridge_update(&rpcNode_bridge.super);
+	cxa_protocolParser_mqtt_update(&mpp);
 }
 
 
 // ******** local function implementations ********
+static cxa_mqtt_rpc_node_bridge_authorization_t authCb_sys(char *const clientIdIn, size_t clientIdLen_bytes,
+														   char *const usernameIn, size_t usernameLen_bytesIn,
+														   uint8_t *const passwordIn, size_t passwordLen_bytesIn,
+														   void *userVarIn)
+{
+	// allow all nodes to connect (really should only be one)
+	return CXA_MQTT_RPC_NODE_BRIDGE_AUTH_ALLOW;
+}
