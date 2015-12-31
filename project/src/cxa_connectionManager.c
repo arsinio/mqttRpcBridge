@@ -100,7 +100,7 @@ void cxa_connManager_init(cxa_timeBase_t *const timeBaseIn, cxa_gpio_t *const le
 
 	// and our mqtt client
 	cxa_mqtt_client_network_init(&mqttClient, timeBaseIn, cxa_uniqueId_getHexString());
-	cxa_mqtt_client_addListener(&mqttClient.super, mqttClientCb_onConnect, mqttClientCb_onDisconnect, NULL);
+	cxa_mqtt_client_addListener(&mqttClient.super, mqttClientCb_onConnect, NULL, mqttClientCb_onDisconnect, NULL);
 
 	// start our LED
 	cxa_led_blink(&led_conn, BLINKPERIODMS_ON_ASSOC, BLINKPERIODMS_OFF_ASSOC);
