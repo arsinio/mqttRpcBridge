@@ -25,6 +25,7 @@
 #include <cxa_led.h>
 #define CXA_LOG_LEVEL					CXA_LOG_LEVEL_TRACE
 #include <cxa_logger_implementation.h>
+#include <cxa_timeBase.h>
 #include <cxa_uniqueId.h>
 
 #include <cxa_config.h>
@@ -73,33 +74,32 @@ static cxa_logger_t logger;
 
 
 // ******** global function implementations ********
-void cxa_connManager_init(cxa_timeBase_t *const timeBaseIn, cxa_gpio_t *const ledConnIn)
+void cxa_connManager_init(cxa_gpio_t *const ledConnIn)
 {
-	cxa_assert(timeBaseIn);
 	cxa_assert(ledConnIn);
 
 	// save our references
-	cxa_led_init(&led_conn, ledConnIn, timeBaseIn);
+	cxa_led_init(&led_conn, ledConnIn);
 
 	// setup our connection standoff
-	cxa_timeDiff_init(&td_connStandoff, timeBaseIn, true);
-	srand(cxa_timeBase_getCount_us(timeBaseIn));
+	cxa_timeDiff_init(&td_connStandoff, true);
+	srand(cxa_timeBase_getCount_us());
 
 	// setup our logger
 	cxa_logger_init(&logger, "connectionManager");
 	cxa_logger_info(&logger, "associating");
 
 	// setup our WiFi
-	cxa_esp8266_wifiManager_init(NULL, timeBaseIn);
+	cxa_esp8266_wifiManager_init(NULL);
 	cxa_esp8266_wifiManager_addListener(wifiManCb_configMode_enter, NULL, NULL, NULL, wifiManCb_associated, wifiManCb_lostAssociation, NULL, NULL);
 	cxa_esp8266_wifiManager_addStoredNetwork(SSID, KEY);
 	cxa_esp8266_wifiManager_start();
 
 	// now setup our network connection
-	cxa_esp8266_network_factory_init(timeBaseIn);
+	cxa_esp8266_network_factory_init();
 
 	// and our mqtt client
-	cxa_mqtt_client_network_init(&mqttClient, timeBaseIn, cxa_uniqueId_getHexString());
+	cxa_mqtt_client_network_init(&mqttClient, cxa_uniqueId_getHexString());
 	cxa_mqtt_client_addListener(&mqttClient.super, mqttClientCb_onConnect, NULL, mqttClientCb_onDisconnect, NULL);
 
 	// start our LED

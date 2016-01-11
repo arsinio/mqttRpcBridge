@@ -46,11 +46,10 @@ static cxa_mqtt_rpc_node_bridge_authorization_t authCb_sys(char *const clientIdI
 
 // ******** local variable declarations ********
 static cxa_esp8266_gpio_t led0;
+static cxa_esp8266_gpio_t gpio_provisioned;
 
 static cxa_esp8266_usart_t usart_log;
 static cxa_esp8266_usart_t usart_system;
-
-static cxa_timeBase_t tb_generalPurpose;
 
 static cxa_mqtt_rpc_node_root_t rpcNode_root;
 
@@ -70,11 +69,10 @@ void setup(void)
 	cxa_ioStream_t* ios_log = cxa_usart_getIoStream(&usart_log.super);
 	cxa_assert_setIoStream(ios_log);
 
-	// setup our general-purpose timebase
-	cxa_esp8266_timeBase_init(&tb_generalPurpose);
+	// setup our timebase
+	cxa_esp8266_timeBase_init();
 
 	// setup our logging system
-	cxa_logger_setGlobalTimeBase(&tb_generalPurpose);
 	cxa_logger_setGlobalIoStream(ios_log);
 
 	// setup our system usart (to communicate with the rest of the system)
@@ -82,16 +80,19 @@ void setup(void)
 	system_set_os_print(0);
 	cxa_esp8266_usart_init_noHH(&usart_system, CXA_ESP8266_USART_0_ALTPINS, 9600, 1);
 
+	// setup our provision gpio flag
+	cxa_esp8266_gpio_init_output(&gpio_provisioned, 14, CXA_GPIO_POLARITY_NONINVERTED, 0);
+
 	// setup our connection manager
-	cxa_connManager_init(&tb_generalPurpose, &led0.super);
+	cxa_connManager_init(&led0.super);
 
 	// setup our MQTT protocol parser
 	cxa_mqtt_message_t* msg = cxa_mqtt_messageFactory_getFreeMessage_empty();
 	cxa_assert(msg);
-	cxa_protocolParser_mqtt_init(&mpp, cxa_usart_getIoStream(&usart_system.super), cxa_mqtt_message_getBuffer(msg), &tb_generalPurpose);
+	cxa_protocolParser_mqtt_init(&mpp, cxa_usart_getIoStream(&usart_system.super), cxa_mqtt_message_getBuffer(msg));
 
 	// setup our node root node and bridge
-	cxa_mqtt_rpc_node_root_init(&rpcNode_root, cxa_connManager_getMqttClient(), "/dev/beerSmart", cxa_uniqueId_getHexString());
+	cxa_mqtt_rpc_node_root_init(&rpcNode_root, cxa_connManager_getMqttClient(), true, "/dev/beerSmart/%s", cxa_uniqueId_getHexString());
 	cxa_mqtt_rpc_node_bridge_single_init(&rpcNode_bridge, &rpcNode_root.super, &mpp, "sys");
 	cxa_mqtt_rpc_node_bridge_single_setAuthCb(&rpcNode_bridge, authCb_sys, NULL);
 }
@@ -101,6 +102,7 @@ void loop(void)
 {
 	cxa_connManager_update();
 	cxa_protocolParser_mqtt_update(&mpp);
+	cxa_mqtt_rpc_node_root_update(&rpcNode_root);
 }
 
 
@@ -110,6 +112,9 @@ static cxa_mqtt_rpc_node_bridge_authorization_t authCb_sys(char *const clientIdI
 														   uint8_t *const passwordIn, size_t passwordLen_bytesIn,
 														   void *userVarIn)
 {
+	// let our attached device know that they have been provisioned
+	cxa_gpio_setValue(&gpio_provisioned.super, 1);
+
 	// allow all nodes to connect (really should only be one)
 	return CXA_MQTT_RPC_NODE_BRIDGE_AUTH_ALLOW;
 }

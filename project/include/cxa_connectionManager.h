@@ -31,7 +31,6 @@
 // ******** includes ********
 #include <cxa_gpio.h>
 #include <cxa_mqtt_client_network.h>
-#include <cxa_timeBase.h>
 
 
 
@@ -43,7 +42,7 @@
 
 
 // ******** global function prototypes ********
-void cxa_connManager_init(cxa_timeBase_t *const timeBaseIn, cxa_gpio_t *const ledConnIn);
+void cxa_connManager_init(cxa_gpio_t *const ledConnIn);
 cxa_mqtt_client_t* cxa_connManager_getMqttClient(void);
 
 void cxa_connManager_update(void);
