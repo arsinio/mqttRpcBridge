@@ -16,7 +16,7 @@
  * @author Christopher Armenio
  */
 #include <cxa_assert.h>
-#include <cxa_connectionManager.h>
+#include <cxa_mqtt_connectionManager.h>
 #define CXA_LOG_LEVEL				CXA_LOG_LEVEL_TRACE
 #include <cxa_logger_implementation.h>
 #include <cxa_uniqueId.h>
@@ -45,7 +45,7 @@ static cxa_mqtt_rpc_node_bridge_authorization_t authCb_sys(char *const clientIdI
 
 
 // ******** local variable declarations ********
-static cxa_esp8266_gpio_t led0;
+static cxa_esp8266_gpio_t gpio_ledConn;
 static cxa_esp8266_gpio_t gpio_provisioned;
 
 static cxa_esp8266_usart_t usart_log;
@@ -61,8 +61,8 @@ static cxa_mqtt_rpc_node_bridge_single_t rpcNode_bridge;
 void setup(void)
 {
 	// setup our assert LED
-	cxa_esp8266_gpio_init_output(&led0, 0, CXA_GPIO_POLARITY_INVERTED, 0);
-	cxa_assert_setAssertGpio(&led0.super);
+	cxa_esp8266_gpio_init_output(&gpio_ledConn, 4, CXA_GPIO_POLARITY_NONINVERTED, 0);
+	cxa_assert_setAssertGpio(&gpio_ledConn.super);
 
 	// setup our logging usart
 	cxa_esp8266_usart_init_noHH(&usart_log, CXA_ESP8266_USART_1, 115200, 0);
@@ -84,7 +84,7 @@ void setup(void)
 	cxa_esp8266_gpio_init_output(&gpio_provisioned, 14, CXA_GPIO_POLARITY_NONINVERTED, 0);
 
 	// setup our connection manager
-	cxa_connManager_init(&led0.super);
+	cxa_mqtt_connManager_init(&gpio_ledConn.super);
 
 	// setup our MQTT protocol parser
 	cxa_mqtt_message_t* msg = cxa_mqtt_messageFactory_getFreeMessage_empty();
@@ -92,7 +92,7 @@ void setup(void)
 	cxa_protocolParser_mqtt_init(&mpp, cxa_usart_getIoStream(&usart_system.super), cxa_mqtt_message_getBuffer(msg));
 
 	// setup our node root node and bridge
-	cxa_mqtt_rpc_node_root_init(&rpcNode_root, cxa_connManager_getMqttClient(), true, "/dev/beerSmart/%s", cxa_uniqueId_getHexString());
+	cxa_mqtt_rpc_node_root_init(&rpcNode_root, cxa_mqtt_connManager_getMqttClient(), true, "/dev/beerSmart/%s", cxa_uniqueId_getHexString());
 	cxa_mqtt_rpc_node_bridge_single_init(&rpcNode_bridge, &rpcNode_root.super, &mpp, "sys");
 	cxa_mqtt_rpc_node_bridge_single_setAuthCb(&rpcNode_bridge, authCb_sys, NULL);
 }
@@ -100,7 +100,7 @@ void setup(void)
 
 void loop(void)
 {
-	cxa_connManager_update();
+	cxa_mqtt_connManager_update();
 	cxa_protocolParser_mqtt_update(&mpp);
 	cxa_mqtt_rpc_node_root_update(&rpcNode_root);
 }
