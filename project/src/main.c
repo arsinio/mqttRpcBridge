@@ -35,6 +35,16 @@
 
 
 // ******** local macro definitions ********
+#define SSID							"BeerSmart"
+#define KEY								"pineapple14"
+
+#define MQTT_SERVER						"m10.cloudmqtt.com"
+//#define MQTT_SERVER_PORTNUM				27754
+#define MQTT_SERVER_PORTNUM				17754
+#define MQTT_SERVER_USES_TLS			false
+
+#define MQTT_SERVER_USERNAME			"arsinio"
+#define MQTT_SERVER_PASSWORD			"tmpPasswd"
 
 
 // ******** local function prototoypes ********
@@ -84,7 +94,10 @@ void setup(void)
 	cxa_esp8266_gpio_init_output(&gpio_provisioned, 14, CXA_GPIO_POLARITY_NONINVERTED, 0);
 
 	// setup our connection manager
-	cxa_mqtt_connManager_init(&gpio_ledConn.super);
+	cxa_mqtt_connManager_init(&gpio_ledConn.super,
+							  SSID, KEY,
+							  MQTT_SERVER, MQTT_SERVER_PORTNUM, MQTT_SERVER_USES_TLS,
+							  MQTT_SERVER_USERNAME, (uint8_t*)MQTT_SERVER_PASSWORD, strlen(MQTT_SERVER_PASSWORD));
 
 	// setup our MQTT protocol parser
 	cxa_mqtt_message_t* msg = cxa_mqtt_messageFactory_getFreeMessage_empty();
